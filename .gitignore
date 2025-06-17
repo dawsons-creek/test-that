@@ -227,3 +227,6 @@ ehthumbs_vista.db
 htmlcov/
 .pytest_cache/
 .ruff_cache/
+
+# LLM instructions and development docs
+docs/
