@@ -20,16 +20,22 @@ from .output import TestFormatter
 def discover_test_files(test_dir: str = "tests", pattern: str = "test_*.py") -> List[Path]:
     """Discover test files in the given directory."""
     test_path = Path(test_dir)
-    
+
     if not test_path.exists():
         return []
-    
-    # Find all matching files
+
+    # Find all matching files recursively
     test_files = []
-    for file_path in test_path.rglob(pattern):
-        if file_path.is_file() and file_path.suffix == '.py':
-            test_files.append(file_path)
-    
+    if test_path.is_file():
+        # Single file
+        if test_path.name.startswith("test_") and test_path.suffix == '.py':
+            test_files.append(test_path)
+    else:
+        # Directory - search recursively
+        for file_path in test_path.rglob(pattern):
+            if file_path.is_file() and file_path.suffix == '.py':
+                test_files.append(file_path)
+
     return sorted(test_files)
 
 
@@ -129,13 +135,18 @@ def main():
         '-s', '--suite',
         help='Run only tests in the specified suite'
     )
-    
+
+    parser.add_argument(
+        '-k', '--filter',
+        help='Run tests matching pattern in description'
+    )
+
     parser.add_argument(
         '--test-dir',
         default=None,
         help='Directory to search for tests (default: tests)'
     )
-    
+
     parser.add_argument(
         '--pattern',
         default=None,
@@ -166,18 +177,35 @@ def main():
     # Clear any existing tests
     clear_registry()
     
+    # Handle specific test syntax (file.py::test_name)
+    specific_test = None
+    if args.files and len(args.files) == 1 and "::" in args.files[0]:
+        file_and_test = args.files[0].split("::", 1)
+        args.files = [file_and_test[0]]
+        specific_test = file_and_test[1]
+
     # Discover and load test files
     if args.files:
-        # Run specific files
-        test_files = [Path(f) for f in args.files]
-        for file_path in test_files:
-            if not file_path.exists():
-                print(f"Error: Test file {file_path} not found")
+        # Run specific files or directories
+        test_files = []
+        for file_arg in args.files:
+            file_path = Path(file_arg)
+            if file_path.is_file():
+                if not file_path.exists():
+                    print(f"Error: Test file {file_path} not found")
+                    return 1
+                test_files.append(file_path)
+            elif file_path.is_dir():
+                # Discover tests in directory
+                dir_tests = discover_test_files(str(file_path), pattern)
+                test_files.extend(dir_tests)
+            else:
+                print(f"Error: Path {file_path} not found")
                 return 1
     else:
         # Discover test files
         test_files = discover_test_files(test_dir, pattern)
-        
+
         if not test_files:
             print(f"No test files found in {test_dir} matching {pattern}")
             return 0
@@ -200,21 +228,77 @@ def main():
         print("No tests found")
         return 0
     
+    # Apply filters
+    filtered_tests = all_tests
+
     # Filter by suite if specified
     if args.suite:
         filtered_tests = [
-            (suite_name, test_name, test_func) 
-            for suite_name, test_name, test_func in all_tests
+            (suite_name, test_name, test_func)
+            for suite_name, test_name, test_func in filtered_tests
             if suite_name == args.suite
         ]
-        
+
         if not filtered_tests:
             print(f"No tests found in suite '{args.suite}'")
             return 1
-        
-        # We need to update the registry to only include the filtered tests
-        # This is a bit hacky, but works for the filtering
+
         print(f"Running tests in suite '{args.suite}'")
+
+    # Filter by pattern if specified
+    if args.filter:
+        filtered_tests = [
+            (suite_name, test_name, test_func)
+            for suite_name, test_name, test_func in filtered_tests
+            if args.filter.lower() in test_name.lower()
+        ]
+
+        if not filtered_tests:
+            print(f"No tests found matching pattern '{args.filter}'")
+            return 1
+
+        print(f"Running tests matching '{args.filter}'")
+
+    # Filter by specific test name if specified
+    if specific_test:
+        # Try to match by function name or description
+        filtered_tests = [
+            (suite_name, test_name, test_func)
+            for suite_name, test_name, test_func in filtered_tests
+            if (test_func.__name__ == specific_test or
+                specific_test.lower() in test_name.lower())
+        ]
+
+        if not filtered_tests:
+            print(f"No test found matching '{specific_test}'")
+            return 1
+
+        print(f"Running specific test: {specific_test}")
+
+    # Update registry with filtered tests if filtering was applied
+    if len(filtered_tests) != len(all_tests):
+        # Clear registry and re-add only filtered tests
+        clear_registry()
+        temp_registry = get_registry()
+
+        # Group filtered tests by suite
+        suite_tests = {}
+        standalone_tests = []
+
+        for suite_name, test_name, test_func in filtered_tests:
+            if suite_name:
+                if suite_name not in suite_tests:
+                    suite_tests[suite_name] = []
+                suite_tests[suite_name].append((test_name, test_func))
+            else:
+                standalone_tests.append((test_name, test_func))
+
+        # Re-register tests
+        temp_registry.standalone_tests = standalone_tests
+        for suite_name, tests in suite_tests.items():
+            suite = temp_registry.create_suite(suite_name)
+            for test_name, test_func in tests:
+                suite.add_test(test_name, test_func)
     
     # Run tests
     runner = TestRunner(verbose=verbose)
