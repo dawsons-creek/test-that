@@ -102,8 +102,13 @@ class TestFormatter:
         if result.passed:
             status = f"{Colors.GREEN}✓{Colors.RESET}"
             line = f"  {status} {result.name}"
-            if self.verbose:
+
+            # Always show timing for slow tests, optionally for all tests in verbose mode
+            if result.is_slow():
+                line += f" ({result.duration:.3f}s) {Colors.YELLOW}[SLOW]{Colors.RESET}"
+            elif self.verbose:
                 line += f" ({result.duration:.3f}s)"
+
             return line
         else:
             status = f"{Colors.RED}✗{Colors.RESET}"

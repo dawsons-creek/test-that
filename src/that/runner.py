@@ -24,6 +24,10 @@ class TestResult:
         self.error = error
         self.duration = duration
 
+    def is_slow(self, threshold: float = 1.0) -> bool:
+        """Check if this test is considered slow (default: > 1 second)."""
+        return self.duration > threshold
+
 
 class TestSuite:
     """Represents a collection of related tests."""

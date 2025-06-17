@@ -21,7 +21,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Testing",
 ]
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/yourusername/that"

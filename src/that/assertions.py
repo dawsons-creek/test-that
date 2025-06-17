@@ -5,7 +5,7 @@ Provides a fluent interface for making assertions about values.
 """
 
 import re
-from typing import Any, Pattern, Type, Union, List
+from typing import Any, Callable, Pattern, Type, Union, List
 
 
 class AssertionError(Exception):
@@ -52,24 +52,53 @@ def create_intelligent_diff(expected: Any, actual: Any) -> List[str]:
     return [f"Expected: {repr(expected)}", f"Got: {repr(actual)}"]
 
 
-def _create_dict_diff(expected: dict, actual: dict) -> List[str]:
-    """Create detailed diff for dictionaries."""
-    lines = ["Dictionary differences:"]
+def _create_dict_diff(expected: dict, actual: dict, path: str = "") -> List[str]:
+    """Create detailed diff for dictionaries with nested path support."""
+    lines = ["Dictionary differences:"] if not path else []
 
     all_keys = set(expected.keys()) | set(actual.keys())
 
     for key in sorted(all_keys):
+        current_path = f"{path}.{key}" if path else key
+
         if key in expected and key in actual:
-            if expected[key] == actual[key]:
-                lines.append(f"  ✓ {key}: {repr(actual[key])}")
+            expected_val = expected[key]
+            actual_val = actual[key]
+
+            if expected_val == actual_val:
+                # For nested objects, show a simplified representation
+                if isinstance(actual_val, dict) and len(actual_val) > 3:
+                    lines.append(f"  ✓ {current_path}: {{...}}")
+                elif isinstance(actual_val, (list, tuple)) and len(actual_val) > 3:
+                    lines.append(f"  ✓ {current_path}: [...] ({len(actual_val)} items)")
+                else:
+                    lines.append(f"  ✓ {current_path}: {repr(actual_val)}")
+            else:
+                # Handle nested dictionaries recursively
+                if isinstance(expected_val, dict) and isinstance(actual_val, dict):
+                    nested_lines = _create_dict_diff(
+                        expected_val, actual_val, current_path
+                    )
+                    lines.extend(nested_lines)  # Include nested differences
+                else:
+                    lines.append(
+                        f"  ✗ {current_path}: expected {repr(expected_val)}, got {repr(actual_val)}"
+                    )
+        elif key in expected:
+            lines.append(f"  - {current_path} (expected but not found)")
+        else:
+            # For added keys, show simplified representation for complex objects
+            actual_val = actual[key]
+            if isinstance(actual_val, dict):
+                lines.append(f"  + {current_path}: {{...}} (not in expected)")
+            elif isinstance(actual_val, (list, tuple)) and len(actual_val) > 3:
+                lines.append(
+                    f"  + {current_path}: [...] ({len(actual_val)} items) (not in expected)"
+                )
             else:
                 lines.append(
-                    f"  ✗ {key}: expected {repr(expected[key])}, got {repr(actual[key])}"
+                    f"  + {current_path}: {repr(actual_val)} (not in expected)"
                 )
-        elif key in expected:
-            lines.append(f"  - {key} (expected but not found)")
-        else:
-            lines.append(f"  + {key}: {repr(actual[key])} (not in expected)")
 
     return lines
 
@@ -442,6 +471,155 @@ class ThatAssertion:
                 expected=f"type {expected_type.__name__}",
                 actual=f"type {type(self.value).__name__}",
             )
+        return self
+
+    def approximately_equals(
+        self, expected: Union[int, float], tolerance: float = 1e-9
+    ) -> "ThatAssertion":
+        """Assert that the numeric value is approximately equal to expected within tolerance."""
+        if not isinstance(self.value, (int, float)) or not isinstance(
+            expected, (int, float)
+        ):
+            raise AssertionError(
+                f"{self.expression}.approximately_equals({expected}, tolerance={tolerance})",
+                expected=f"numeric value approximately equal to {expected}",
+                actual=f"non-numeric value {repr(self.value)}",
+            )
+
+        diff = abs(self.value - expected)
+        if diff > tolerance:
+            raise AssertionError(
+                f"{self.expression}.approximately_equals({expected}, tolerance={tolerance})",
+                expected=expected,
+                actual=self.value,
+                diff_lines=[
+                    f"Expected: {expected} (±{tolerance})",
+                    f"Got: {self.value}",
+                    f"Difference: {diff} (exceeds tolerance)",
+                ],
+            )
+        return self
+
+    def all_satisfy(self, predicate: Callable[[Any], bool]) -> "ThatAssertion":
+        """Assert that all items in the collection satisfy the predicate."""
+        try:
+            items = list(self.value)
+        except TypeError:
+            raise AssertionError(
+                f"{self.expression}.all_satisfy(<predicate>)",
+                expected="iterable collection",
+                actual=f"{type(self.value).__name__} (not iterable)",
+            )
+
+        failing_items = []
+        for i, item in enumerate(items):
+            try:
+                if not predicate(item):
+                    failing_items.append((i, item))
+            except Exception as e:
+                failing_items.append((i, f"Error: {e}"))
+
+        if failing_items:
+            failure_details = []
+            for i, item in failing_items[:5]:  # Show first 5 failures
+                failure_details.append(f"  [{i}]: {repr(item)}")
+            if len(failing_items) > 5:
+                failure_details.append(f"  ... and {len(failing_items) - 5} more")
+
+            raise AssertionError(
+                f"{self.expression}.all_satisfy(<predicate>)",
+                expected="all items to satisfy predicate",
+                actual=f"{len(failing_items)} items failed",
+                diff_lines=["Items that failed:"] + failure_details,
+            )
+        return self
+
+    def are_unique(self) -> "ThatAssertion":
+        """Assert that all items in the collection are unique."""
+        try:
+            items = list(self.value)
+        except TypeError:
+            raise AssertionError(
+                f"{self.expression}.are_unique()",
+                expected="iterable collection",
+                actual=f"{type(self.value).__name__} (not iterable)",
+            )
+
+        seen = set()
+        duplicates = []
+        for i, item in enumerate(items):
+            if item in seen:
+                duplicates.append((i, item))
+            else:
+                seen.add(item)
+
+        if duplicates:
+            duplicate_details = []
+            for i, item in duplicates[:5]:  # Show first 5 duplicates
+                duplicate_details.append(f"  [{i}]: {repr(item)}")
+            if len(duplicates) > 5:
+                duplicate_details.append(f"  ... and {len(duplicates) - 5} more")
+
+            raise AssertionError(
+                f"{self.expression}.are_unique()",
+                expected="all unique items",
+                actual=f"{len(duplicates)} duplicate items found",
+                diff_lines=["Duplicate items:"] + duplicate_details,
+            )
+        return self
+
+    def are_sorted_by(
+        self, key_func: Union[str, Callable[[Any], Any]], reverse: bool = False
+    ) -> "ThatAssertion":
+        """Assert that items in the collection are sorted by the given key."""
+        try:
+            items = list(self.value)
+        except TypeError:
+            raise AssertionError(
+                f"{self.expression}.are_sorted_by({repr(key_func)})",
+                expected="iterable collection",
+                actual=f"{type(self.value).__name__} (not iterable)",
+            )
+
+        if len(items) <= 1:
+            return self  # Single item or empty is always sorted
+
+        # Handle string key (attribute name or dict key) or callable
+        if isinstance(key_func, str):
+
+            def get_key(item):
+                if isinstance(item, dict):
+                    return item[key_func]
+                else:
+                    return getattr(item, key_func)
+
+        else:
+            get_key = key_func
+
+        try:
+            sorted_items = sorted(items, key=get_key, reverse=reverse)
+        except Exception as e:
+            raise AssertionError(
+                f"{self.expression}.are_sorted_by({repr(key_func)})",
+                expected="sortable items",
+                actual=f"Error sorting: {e}",
+            )
+
+        if items != sorted_items:
+            # Find first out-of-order item
+            for i in range(len(items)):
+                if items[i] != sorted_items[i]:
+                    direction = "descending" if reverse else "ascending"
+                    raise AssertionError(
+                        f"{self.expression}.are_sorted_by({repr(key_func)})",
+                        expected=f"items sorted {direction}",
+                        actual=f"item at index {i} is out of order",
+                        diff_lines=[
+                            f"Expected order: {repr(sorted_items[:5])}{'...' if len(sorted_items) > 5 else ''}",
+                            f"Actual order:   {repr(items[:5])}{'...' if len(items) > 5 else ''}",
+                            f"First difference at index {i}",
+                        ],
+                    )
         return self
 
 

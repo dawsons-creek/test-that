@@ -14,6 +14,8 @@ Usage:
 
 from .assertions import that
 from .runner import test, suite
+from .time_freeze import frozen_at
+from .http_recording import recorded
 
 __version__ = "0.1.0"
-__all__ = ["test", "suite", "that"]
+__all__ = ["test", "suite", "that", "frozen_at", "recorded"]
