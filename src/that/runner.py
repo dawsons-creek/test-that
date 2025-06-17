@@ -218,35 +218,11 @@ class TestRunner:
         start_time = time.time()
 
         try:
-            # Check if test function expects setup result
-            sig = inspect.signature(test_func)
-            params = list(sig.parameters.values())
-
-            # Determine if test is async
-            is_async = asyncio.iscoroutinefunction(test_func)
-
-            # Prepare arguments
-            if len(params) > 0 and setup_result is not None:
-                args = (setup_result,)
+            args = _prepare_test_arguments(test_func, setup_result)
+            
+            if asyncio.iscoroutinefunction(test_func):
+                _execute_async_test(test_func, args)
             else:
-                args = ()
-
-            # Run the test
-            if is_async:
-                # Run async test
-                try:
-                    # Try to get existing event loop
-                    asyncio.get_running_loop()
-                    # We're already in an async context, run synchronously
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(asyncio.run, test_func(*args))
-                        future.result()
-                except RuntimeError:
-                    # No event loop running, create one
-                    asyncio.run(test_func(*args))
-            else:
-                # Run sync test
                 test_func(*args)
 
             duration = time.time() - start_time
@@ -258,49 +234,12 @@ class TestRunner:
 
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""
-        results = []
-        setup_result = None
+        setup_result = _run_suite_setup(suite)
+        if setup_result is False:
+            return _create_setup_failure_results(suite)
 
-        # Run setup if present
-        if suite.setup_func:
-            try:
-                setup_result = suite.setup_func()
-                suite.setup_result = setup_result
-            except Exception as e:
-                # If setup fails, mark all tests as failed
-                for test_name, _ in suite.tests:
-                    results.append(
-                        TestResult(
-                            test_name, False, error=Exception(f"Setup failed: {e}")
-                        )
-                    )
-                return results
-
-        # Run tests
-        from .tags import get_tag_registry
-        tag_registry = get_tag_registry()
-        
-        for test_name, test_func, _ in suite.tests:
-            # Check if test should run based on tags
-            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
-                result = self.run_test(test_name, test_func, setup_result)
-                results.append(result)
-
-        # Run teardown if present
-        if suite.teardown_func:
-            try:
-                if setup_result is not None:
-                    sig = inspect.signature(suite.teardown_func)
-                    if len(sig.parameters) > 0:
-                        suite.teardown_func(setup_result)
-                    else:
-                        suite.teardown_func()
-                else:
-                    suite.teardown_func()
-            except Exception as e:
-                # Teardown failure doesn't affect test results, but we should log it
-                if self.verbose:
-                    print(f"Warning: Teardown failed: {e}")
+        results = _run_suite_tests(suite, setup_result, self)
+        _run_suite_teardown(suite, setup_result, self.verbose)
 
         return results
 
@@ -334,6 +273,90 @@ class TestRunner:
         total_time = sum(r.duration for r in self.results)
 
         return total, passed, failed, total_time
+
+
+def _prepare_test_arguments(test_func: Callable, setup_result: Any) -> tuple:
+    """Prepare arguments for test function based on signature."""
+    sig = inspect.signature(test_func)
+    params = list(sig.parameters.values())
+
+    if len(params) > 0 and setup_result is not None:
+        return (setup_result,)
+    else:
+        return ()
+
+
+def _execute_async_test(test_func: Callable, args: tuple):
+    """Execute async test function with proper event loop handling."""
+    try:
+        # Try to get existing event loop
+        asyncio.get_running_loop()
+        # We're already in an async context, run in thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, test_func(*args))
+            future.result()
+    except RuntimeError:
+        # No event loop running, create one
+        asyncio.run(test_func(*args))
+
+
+def _run_suite_setup(suite: TestSuite) -> Any:
+    """Run suite setup and return result or False if failed."""
+    if not suite.setup_func:
+        return None
+
+    try:
+        setup_result = suite.setup_func()
+        suite.setup_result = setup_result
+        return setup_result
+    except Exception:
+        return False
+
+
+def _create_setup_failure_results(suite: TestSuite) -> List[TestResult]:
+    """Create failure results for all tests when setup fails."""
+    results = []
+    for test_name, _, _ in suite.tests:
+        results.append(
+            TestResult(test_name, False, error=Exception("Setup failed"))
+        )
+    return results
+
+
+def _run_suite_tests(suite: TestSuite, setup_result: Any, runner) -> List[TestResult]:
+    """Run all tests in the suite that pass tag filtering."""
+    from .tags import get_tag_registry
+    tag_registry = get_tag_registry()
+    
+    results = []
+    for test_name, test_func, _ in suite.tests:
+        if tag_registry.should_run(test_func, runner.include_tags, runner.exclude_tags):
+            result = runner.run_test(test_name, test_func, setup_result)
+            results.append(result)
+    
+    return results
+
+
+def _run_suite_teardown(suite: TestSuite, setup_result: Any, verbose: bool):
+    """Run suite teardown with proper error handling."""
+    if not suite.teardown_func:
+        return
+
+    try:
+        if setup_result is not None:
+            sig = inspect.signature(suite.teardown_func)
+            if len(sig.parameters) > 0:
+                suite.teardown_func(setup_result)
+            else:
+                suite.teardown_func()
+        else:
+            suite.teardown_func()
+    except Exception as e:
+        if verbose:
+            print(f"Warning: Teardown failed: {e}")
+
+
 
 
 def get_registry() -> TestRegistry:

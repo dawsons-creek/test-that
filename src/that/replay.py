@@ -43,81 +43,89 @@ class TimeContextOrDecorator:
     def __enter__(self):
         """When used as context manager: with replay.time(...)"""
         try:
-            self.old_time = self.replay._context_time
-            self.replay._context_time = self.frozen_time
-            self.replay._context_stack.append(self.frozen_time)
-
-            # Create a TimeFreeze instance and use its patching mechanism
-            self._time_freezer = TimeFreeze(self.frozen_time)
-
-            # We need to manually apply the patches that TimeFreeze would apply
-            # This is a bit of a hack, but it reuses the existing logic
-            dt = self._time_freezer.frozen_time
-
-            # Create mock return values
-            mock_now = dt
-            mock_utcnow = (
-                dt.astimezone(datetime.timezone.utc) if dt.tzinfo
-                else dt.replace(tzinfo=datetime.timezone.utc)
-            )
-            mock_timestamp = dt.timestamp()
-
-            # Import required modules
-            import datetime as dt_module
-            from unittest.mock import patch
-            from that.time_freeze import NANOSECONDS_PER_SECOND
-
-            # Store original classes to avoid recursion
-            original_datetime = dt_module.datetime
-            original_date = dt_module.date
-
-            # Create and start patches
-            self._datetime_patch = patch("datetime.datetime")
-            self._date_patch = patch("datetime.date")
-            self._time_patch = patch("time.time", return_value=mock_timestamp)
-            self._time_ns_patch = patch("time.time_ns", return_value=int(mock_timestamp * NANOSECONDS_PER_SECOND))
-            self._gmtime_patch = patch("time.gmtime", return_value=mock_utcnow.timetuple())
-            self._localtime_patch = patch("time.localtime", return_value=mock_now.timetuple())
-
-            # Start patches and get mock objects
-            mock_datetime = self._datetime_patch.start()
-            mock_date = self._date_patch.start()
-            self._time_patch.start()
-            self._time_ns_patch.start()
-            self._gmtime_patch.start()
-            self._localtime_patch.start()
-
-            # Configure datetime mock to avoid recursion
-            mock_datetime.now.return_value = mock_now
-            mock_datetime.utcnow.return_value = mock_utcnow
-            mock_datetime.today.return_value = mock_now.date()
-
-            # Forward constructor and other methods to original class
-            def datetime_constructor(*args, **kwargs):
-                return original_datetime(*args, **kwargs)
-
-            mock_datetime.side_effect = datetime_constructor
-            mock_datetime.fromisoformat = original_datetime.fromisoformat
-            mock_datetime.fromtimestamp = original_datetime.fromtimestamp
-            mock_datetime.strptime = original_datetime.strptime
-            mock_datetime.min = original_datetime.min
-            mock_datetime.max = original_datetime.max
-
-            # Configure date mock
-            mock_date.today.return_value = mock_now.date()
-
-            def date_constructor(*args, **kwargs):
-                return original_date(*args, **kwargs)
-
-            mock_date.side_effect = date_constructor
-            mock_date.fromisoformat = original_date.fromisoformat
-            mock_date.fromordinal = original_date.fromordinal
-            mock_date.min = original_date.min
-            mock_date.max = original_date.max
-
+            self._setup_context_state()
+            self._setup_time_freezing()
             return self
         except Exception as e:
             raise RuntimeError(f"Failed to enter time context: {e}") from e
+
+    def _setup_context_state(self):
+        """Setup the context state for the replay system."""
+        self.old_time = self.replay._context_time
+        self.replay._context_time = self.frozen_time
+        self.replay._context_stack.append(self.frozen_time)
+
+    def _setup_time_freezing(self):
+        """Setup time freezing patches."""
+        self._time_freezer = TimeFreeze(self.frozen_time)
+        dt = self._time_freezer.frozen_time
+
+        mock_values = self._create_mock_time_values(dt)
+        self._create_and_start_patches(mock_values)
+        self._configure_datetime_mocks(mock_values)
+
+    def _create_mock_time_values(self, dt: datetime.datetime) -> dict:
+        """Create mock time values for patching."""
+        return {
+            'now': dt,
+            'utcnow': (
+                dt.astimezone(datetime.timezone.utc) if dt.tzinfo
+                else dt.replace(tzinfo=datetime.timezone.utc)
+            ),
+            'timestamp': dt.timestamp()
+        }
+
+    def _create_and_start_patches(self, mock_values: dict):
+        """Create and start all time-related patches."""
+        from unittest.mock import patch
+        from that.time_freeze import NANOSECONDS_PER_SECOND
+
+        self._datetime_patch = patch("datetime.datetime")
+        self._date_patch = patch("datetime.date")
+        self._time_patch = patch("time.time", return_value=mock_values['timestamp'])
+        self._time_ns_patch = patch(
+            "time.time_ns", 
+            return_value=int(mock_values['timestamp'] * NANOSECONDS_PER_SECOND)
+        )
+        self._gmtime_patch = patch("time.gmtime", return_value=mock_values['utcnow'].timetuple())
+        self._localtime_patch = patch("time.localtime", return_value=mock_values['now'].timetuple())
+
+        # Start all patches
+        self._mock_datetime = self._datetime_patch.start()
+        self._mock_date = self._date_patch.start()
+        self._time_patch.start()
+        self._time_ns_patch.start()
+        self._gmtime_patch.start()
+        self._localtime_patch.start()
+
+    def _configure_datetime_mocks(self, mock_values: dict):
+        """Configure datetime and date mocks with proper forwarding."""
+        import datetime as dt_module
+
+        # Store originals to avoid recursion
+        original_datetime = dt_module.datetime
+        original_date = dt_module.date
+
+        # Configure datetime mock
+        self._mock_datetime.now.return_value = mock_values['now']
+        self._mock_datetime.utcnow.return_value = mock_values['utcnow']
+        self._mock_datetime.today.return_value = mock_values['now'].date()
+
+        # Forward constructor and methods
+        self._mock_datetime.side_effect = lambda *a, **k: original_datetime(*a, **k)
+        self._mock_datetime.fromisoformat = original_datetime.fromisoformat
+        self._mock_datetime.fromtimestamp = original_datetime.fromtimestamp
+        self._mock_datetime.strptime = original_datetime.strptime
+        self._mock_datetime.min = original_datetime.min
+        self._mock_datetime.max = original_datetime.max
+
+        # Configure date mock
+        self._mock_date.today.return_value = mock_values['now'].date()
+        self._mock_date.side_effect = lambda *a, **k: original_date(*a, **k)
+        self._mock_date.fromisoformat = original_date.fromisoformat
+        self._mock_date.fromordinal = original_date.fromordinal
+        self._mock_date.min = original_date.min
+        self._mock_date.max = original_date.max
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit context manager."""

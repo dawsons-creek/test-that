@@ -55,52 +55,55 @@ def create_intelligent_diff(expected: Any, actual: Any) -> List[str]:
 def _create_dict_diff(expected: dict, actual: dict, path: str = "") -> List[str]:
     """Create detailed diff for dictionaries with nested path support."""
     lines = ["Dictionary differences:"] if not path else []
-
     all_keys = set(expected.keys()) | set(actual.keys())
 
     for key in sorted(all_keys):
         current_path = f"{path}.{key}" if path else key
-
+        
         if key in expected and key in actual:
-            expected_val = expected[key]
-            actual_val = actual[key]
-
-            if expected_val == actual_val:
-                # For nested objects, show a simplified representation
-                if isinstance(actual_val, dict) and len(actual_val) > 3:
-                    lines.append(f"  ✓ {current_path}: {{...}}")
-                elif isinstance(actual_val, (list, tuple)) and len(actual_val) > 3:
-                    lines.append(f"  ✓ {current_path}: [...] ({len(actual_val)} items)")
-                else:
-                    lines.append(f"  ✓ {current_path}: {repr(actual_val)}")
-            else:
-                # Handle nested dictionaries recursively
-                if isinstance(expected_val, dict) and isinstance(actual_val, dict):
-                    nested_lines = _create_dict_diff(
-                        expected_val, actual_val, current_path
-                    )
-                    lines.extend(nested_lines)  # Include nested differences
-                else:
-                    lines.append(
-                        f"  ✗ {current_path}: expected {repr(expected_val)}, got {repr(actual_val)}"
-                    )
+            lines.extend(_process_common_key(key, expected, actual, current_path))
         elif key in expected:
             lines.append(f"  - {current_path} (expected but not found)")
         else:
-            # For added keys, show simplified representation for complex objects
-            actual_val = actual[key]
-            if isinstance(actual_val, dict):
-                lines.append(f"  + {current_path}: {{...}} (not in expected)")
-            elif isinstance(actual_val, (list, tuple)) and len(actual_val) > 3:
-                lines.append(
-                    f"  + {current_path}: [...] ({len(actual_val)} items) (not in expected)"
-                )
-            else:
-                lines.append(
-                    f"  + {current_path}: {repr(actual_val)} (not in expected)"
-                )
+            lines.extend(_process_added_key(key, actual, current_path))
 
     return lines
+
+
+def _process_common_key(key: str, expected: dict, actual: dict, path: str) -> List[str]:
+    """Process a key that exists in both dictionaries."""
+    expected_val = expected[key]
+    actual_val = actual[key]
+
+    if expected_val == actual_val:
+        return [_format_matching_value(path, actual_val)]
+    
+    # Handle nested dictionaries recursively
+    if isinstance(expected_val, dict) and isinstance(actual_val, dict):
+        return _create_dict_diff(expected_val, actual_val, path)
+    else:
+        return [f"  ✗ {path}: expected {repr(expected_val)}, got {repr(actual_val)}"]
+
+
+def _format_matching_value(path: str, value: Any) -> str:
+    """Format a matching value with appropriate simplification."""
+    if isinstance(value, dict) and len(value) > 3:
+        return f"  ✓ {path}: {{...}}"
+    elif isinstance(value, (list, tuple)) and len(value) > 3:
+        return f"  ✓ {path}: [...] ({len(value)} items)"
+    else:
+        return f"  ✓ {path}: {repr(value)}"
+
+
+def _process_added_key(key: str, actual: dict, path: str) -> List[str]:
+    """Process a key that only exists in actual."""
+    actual_val = actual[key]
+    if isinstance(actual_val, dict):
+        return [f"  + {path}: {{...}} (not in expected)"]
+    elif isinstance(actual_val, (list, tuple)) and len(actual_val) > 3:
+        return [f"  + {path}: [...] ({len(actual_val)} items) (not in expected)"]
+    else:
+        return [f"  + {path}: {repr(actual_val)} (not in expected)"]
 
 
 def _create_list_diff(expected: list, actual: list) -> List[str]:
@@ -181,6 +184,14 @@ class ThatAssertion:
 
     def equals(self, expected: Any) -> "ThatAssertion":
         """Assert that the value equals the expected value."""
+        # Fast path for None comparison
+        if expected is None and self.value is not None:
+            raise AssertionError(
+                f"{self.expression}.equals(None)",
+                expected=None,
+                actual=self.value,
+            )
+        
         if self.value != expected:
             diff_lines = create_intelligent_diff(expected, self.value)
             raise AssertionError(
@@ -572,55 +583,80 @@ class ThatAssertion:
         self, key_func: Union[str, Callable[[Any], Any]], reverse: bool = False
     ) -> "ThatAssertion":
         """Assert that items in the collection are sorted by the given key."""
-        try:
-            items = list(self.value)
-        except TypeError:
-            raise AssertionError(
-                f"{self.expression}.are_sorted_by({repr(key_func)})",
-                expected="iterable collection",
-                actual=f"{type(self.value).__name__} (not iterable)",
-            )
-
+        items = _validate_iterable_for_sorting(self.value, self.expression, key_func)
+        
         if len(items) <= 1:
-            return self  # Single item or empty is always sorted
+            return self
 
-        # Handle string key (attribute name or dict key) or callable
-        if isinstance(key_func, str):
-
-            def get_key(item):
-                if isinstance(item, dict):
-                    return item[key_func]
-                else:
-                    return getattr(item, key_func)
-
-        else:
-            get_key = key_func
-
-        try:
-            sorted_items = sorted(items, key=get_key, reverse=reverse)
-        except Exception as e:
-            raise AssertionError(
-                f"{self.expression}.are_sorted_by({repr(key_func)})",
-                expected="sortable items",
-                actual=f"Error sorting: {e}",
-            )
-
+        get_key = _create_key_function(key_func)
+        sorted_items = _sort_items_safely(items, get_key, reverse, self.expression, key_func)
+        
         if items != sorted_items:
-            # Find first out-of-order item
-            for i in range(len(items)):
-                if items[i] != sorted_items[i]:
-                    direction = "descending" if reverse else "ascending"
-                    raise AssertionError(
-                        f"{self.expression}.are_sorted_by({repr(key_func)})",
-                        expected=f"items sorted {direction}",
-                        actual=f"item at index {i} is out of order",
-                        diff_lines=[
-                            f"Expected order: {repr(sorted_items[:5])}{'...' if len(sorted_items) > 5 else ''}",
-                            f"Actual order:   {repr(items[:5])}{'...' if len(items) > 5 else ''}",
-                            f"First difference at index {i}",
-                        ],
-                    )
+            _raise_sorting_error(items, sorted_items, reverse, self.expression, key_func)
+        
         return self
+
+
+def _validate_iterable_for_sorting(value: Any, expression: str, key_func) -> list:
+    """Validate that value is iterable for sorting."""
+    try:
+        return list(value)
+    except TypeError:
+        raise AssertionError(
+            f"{expression}.are_sorted_by({repr(key_func)})",
+            expected="iterable collection",
+            actual=f"{type(value).__name__} (not iterable)",
+        )
+
+
+def _create_key_function(key_func: Union[str, Callable]):
+    """Create appropriate key function from string or callable."""
+    if isinstance(key_func, str):
+        def get_key(item):
+            if isinstance(item, dict):
+                return item[key_func]
+            else:
+                return getattr(item, key_func)
+        return get_key
+    else:
+        return key_func
+
+
+def _sort_items_safely(items: list, get_key: Callable, reverse: bool, expression: str, key_func) -> list:
+    """Sort items safely with error handling."""
+    try:
+        return sorted(items, key=get_key, reverse=reverse)
+    except Exception as e:
+        raise AssertionError(
+            f"{expression}.are_sorted_by({repr(key_func)})",
+            expected="sortable items",
+            actual=f"Error sorting: {e}",
+        )
+
+
+def _raise_sorting_error(items: list, sorted_items: list, reverse: bool, expression: str, key_func):
+    """Raise assertion error for unsorted items."""
+    first_diff_index = _find_first_difference(items, sorted_items)
+    direction = "descending" if reverse else "ascending"
+    
+    raise AssertionError(
+        f"{expression}.are_sorted_by({repr(key_func)})",
+        expected=f"items sorted {direction}",
+        actual=f"item at index {first_diff_index} is out of order",
+        diff_lines=[
+            f"Expected order: {repr(sorted_items[:5])}{'...' if len(sorted_items) > 5 else ''}",
+            f"Actual order:   {repr(items[:5])}{'...' if len(items) > 5 else ''}",
+            f"First difference at index {first_diff_index}",
+        ],
+    )
+
+
+def _find_first_difference(items: list, sorted_items: list) -> int:
+    """Find index of first difference between lists."""
+    for i in range(len(items)):
+        if items[i] != sorted_items[i]:
+            return i
+    return 0
 
 
 def that(value: Any) -> ThatAssertion:

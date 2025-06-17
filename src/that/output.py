@@ -6,7 +6,7 @@ Handles formatting and display of test results.
 
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from .runner import TestResult, TestRegistry
 from .assertions import AssertionError
 
@@ -201,63 +201,90 @@ class TestFormatter:
     
     def _format_focused_results(self, results: List[TestResult], registry: TestRegistry) -> str:
         """Format results in focus mode - show only failures with context."""
+        passed, failed = _separate_results(results)
+        
         output = []
-        passed = []
-        failed = []
-        
-        for result in results:
-            if result.passed:
-                passed.append(result)
-            else:
-                failed.append(result)
-        
-        # Show brief summary of passed tests
         if passed:
-            for result in passed:
-                output.append(f"{Colors.GREEN}✓{Colors.RESET} {result.name}")
+            output.extend(_format_passed_summary(passed))
         
-        # Show detailed failure information
         if failed:
             if passed:
-                output.append("")  # Blank line between passed and failed
-            
-            for result in failed:
-                output.append(f"{Colors.RED}✗{Colors.RESET} {result.name}")
                 output.append("")
-                
-                if result.error:
-                    # Show the assertion that failed
-                    if isinstance(result.error, AssertionError) and hasattr(result.error, 'message'):
-                        output.append(f"  {result.error.message}")
-                        output.append("")
-                    
-                    # Show error details
-                    error_lines = self._format_error(result.error)
-                    output.extend(error_lines)
-                    
-                    # Add context section
-                    output.append("")
-                    output.append("  Context:")
-                    
-                    # Try to extract local variables from the test
-                    import traceback
-                    tb = traceback.extract_tb(result.error.__traceback__)
-                    for frame in tb:
-                        if "test_" in frame.filename:
-                            output.append(f"    File: {frame.filename}:{frame.lineno}")
-                            output.append(f"    Function: {frame.name}")
-                            if frame.locals:
-                                for var, value in frame.locals.items():
-                                    if not var.startswith('_'):
-                                        output.append(f"    {var} = {repr(value)}")
-                            break
-                    
-                output.append("")
+            output.extend(_format_failed_details(failed, self))
         
-        # Add summary
         output.append(self._format_summary(results))
-        
         return "\n".join(output)
+
+
+def _separate_results(results: List[TestResult]) -> Tuple[List[TestResult], List[TestResult]]:
+    """Separate results into passed and failed lists."""
+    passed = []
+    failed = []
+    for result in results:
+        if result.passed:
+            passed.append(result)
+        else:
+            failed.append(result)
+    return passed, failed
+
+
+def _format_passed_summary(passed: List[TestResult]) -> List[str]:
+    """Format brief summary of passed tests."""
+    return [f"{Colors.GREEN}✓{Colors.RESET} {result.name}" for result in passed]
+
+
+def _format_failed_details(failed: List[TestResult], formatter) -> List[str]:
+    """Format detailed failure information."""
+    output = []
+    for result in failed:
+        output.append(f"{Colors.RED}✗{Colors.RESET} {result.name}")
+        output.append("")
+        
+        if result.error:
+            output.extend(_format_failure_context(result.error, formatter))
+            output.append("")
+    
+    return output
+
+
+def _format_failure_context(error: Exception, formatter) -> List[str]:
+    """Format failure context including assertion and traceback."""
+    output = []
+    
+    # Show the assertion that failed
+    if isinstance(error, AssertionError) and hasattr(error, 'message'):
+        output.append(f"  {error.message}")
+        output.append("")
+    
+    # Show error details
+    error_lines = formatter._format_error(error)
+    output.extend(error_lines)
+    
+    # Add context section
+    output.append("")
+    output.append("  Context:")
+    output.extend(_extract_test_context(error))
+    
+    return output
+
+
+def _extract_test_context(error: Exception) -> List[str]:
+    """Extract test context from traceback."""
+    import traceback
+    output = []
+    
+    tb = traceback.extract_tb(error.__traceback__)
+    for frame in tb:
+        if "test_" in frame.filename:
+            output.append(f"    File: {frame.filename}:{frame.lineno}")
+            output.append(f"    Function: {frame.name}")
+            if frame.locals:
+                for var, value in frame.locals.items():
+                    if not var.startswith('_'):
+                        output.append(f"    {var} = {repr(value)}")
+            break
+    
+    return output
 
 
 def format_diff(expected, actual) -> List[str]:
