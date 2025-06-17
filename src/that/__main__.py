@@ -8,10 +8,11 @@ import argparse
 import glob
 import importlib.util
 import os
+import re
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple, Set
 
 from .runner import TestRunner, get_registry, clear_registry
 from .output import TestFormatter
@@ -37,6 +38,53 @@ def discover_test_files(test_dir: str = "tests", pattern: str = "test_*.py") -> 
                 test_files.append(file_path)
 
     return sorted(test_files)
+
+
+def parse_file_with_line(file_arg: str) -> Tuple[Path, Optional[Set[int]]]:
+    """Parse file argument that may contain line numbers.
+    
+    Supports:
+    - file.py:42         (single line)
+    - file.py:20-50      (line range)
+    - file.py:10,20,30   (multiple lines)
+    - file.py            (all tests)
+    """
+    # Check for line number syntax
+    if ':' in file_arg and not (sys.platform == 'win32' and len(file_arg) > 1 and file_arg[1] == ':'):
+        # Split on the last colon to handle absolute paths
+        parts = file_arg.rsplit(':', 1)
+        file_path = Path(parts[0])
+        line_spec = parts[1]
+        
+        line_numbers = set()
+        
+        # Parse line specification
+        if '-' in line_spec:
+            # Range: 20-50
+            start, end = line_spec.split('-', 1)
+            try:
+                start_line = int(start)
+                end_line = int(end)
+                line_numbers.update(range(start_line, end_line + 1))
+            except ValueError:
+                raise ValueError(f"Invalid line range: {line_spec}")
+        elif ',' in line_spec:
+            # Multiple: 10,20,30
+            for line in line_spec.split(','):
+                try:
+                    line_numbers.add(int(line.strip()))
+                except ValueError:
+                    raise ValueError(f"Invalid line number: {line}")
+        else:
+            # Single: 42
+            try:
+                line_numbers.add(int(line_spec))
+            except ValueError:
+                raise ValueError(f"Invalid line number: {line_spec}")
+        
+        return file_path, line_numbers
+    else:
+        return Path(file_arg), None
 
 
 def load_test_file(file_path: Path) -> bool:
@@ -116,7 +164,7 @@ def main():
     parser.add_argument(
         'files', 
         nargs='*', 
-        help='Test files to run (default: discover in test directory)'
+        help='Test files to run with optional line numbers (e.g., test.py:42, test.py:20-50)'
     )
     
     parser.add_argument(
@@ -177,12 +225,32 @@ def main():
     # Clear any existing tests
     clear_registry()
     
-    # Handle specific test syntax (file.py::test_name)
+    # Handle specific test syntax (file.py::test_name) and line numbers
     specific_test = None
-    if args.files and len(args.files) == 1 and "::" in args.files[0]:
-        file_and_test = args.files[0].split("::", 1)
-        args.files = [file_and_test[0]]
-        specific_test = file_and_test[1]
+    line_filters = {}  # file_path -> set of line numbers
+    
+    if args.files:
+        parsed_files = []
+        for file_arg in args.files:
+            if "::" in file_arg:
+                # Handle file.py::test_name syntax
+                file_and_test = file_arg.split("::", 1)
+                parsed_files.append(file_and_test[0])
+                specific_test = file_and_test[1]
+            else:
+                # Parse potential line numbers
+                try:
+                    file_path, line_numbers = parse_file_with_line(file_arg)
+                    parsed_files.append(str(file_path))
+                    if line_numbers:
+                        # Store absolute path for line filtering
+                        abs_path = str(file_path.resolve())
+                        line_filters[abs_path] = line_numbers
+                except ValueError as e:
+                    print(f"Error: {e}")
+                    return 1
+        
+        args.files = parsed_files
 
     # Discover and load test files
     if args.files:
@@ -274,6 +342,30 @@ def main():
             return 1
 
         print(f"Running specific test: {specific_test}")
+    
+    # Filter by line numbers if specified
+    if line_filters:
+        line_filtered_tests = []
+        
+        for file_path, line_numbers in line_filters.items():
+            # Get test names that match these line numbers
+            matching_test_names = registry.get_tests_by_line(file_path, line_numbers)
+            
+            # Filter tests by matching names
+            for suite_name, test_name, test_func in filtered_tests:
+                if test_name in matching_test_names:
+                    line_filtered_tests.append((suite_name, test_name, test_func))
+        
+        if not line_filtered_tests:
+            lines_desc = ", ".join([f"{path}:{','.join(map(str, sorted(lines)))}" 
+                                   for path, lines in line_filters.items()])
+            print(f"No tests found at lines: {lines_desc}")
+            return 1
+        
+        filtered_tests = line_filtered_tests
+        lines_desc = ", ".join([f"{Path(path).name}:{','.join(map(str, sorted(lines)))}" 
+                               for path, lines in line_filters.items()])
+        print(f"Running tests at lines: {lines_desc}")
 
     # Update registry with filtered tests if filtering was applied
     if len(filtered_tests) != len(all_tests):
@@ -293,12 +385,12 @@ def main():
             else:
                 standalone_tests.append((test_name, test_func))
 
-        # Re-register tests
-        temp_registry.standalone_tests = standalone_tests
+        # Re-register tests (Note: we lose line number info here, but that's ok for filtered tests)
+        temp_registry.standalone_tests = [(name, func, 0) for name, func in standalone_tests]
         for suite_name, tests in suite_tests.items():
             suite = temp_registry.create_suite(suite_name)
             for test_name, test_func in tests:
-                suite.add_test(test_name, test_func)
+                suite.add_test(test_name, test_func, 0)
     
     # Run tests
     runner = TestRunner(verbose=verbose)

@@ -5,17 +5,126 @@ Provides a fluent interface for making assertions about values.
 """
 
 import re
-from typing import Any, Callable, Pattern, Type, Union
+import difflib
+from typing import Any, Callable, Pattern, Type, Union, List, Dict as DictType
 
 
 class AssertionError(Exception):
     """Custom assertion error with detailed information."""
     
-    def __init__(self, message: str, expected: Any = None, actual: Any = None):
+    def __init__(self, message: str, expected: Any = None, actual: Any = None, diff_lines: List[str] = None):
         super().__init__(message)
         self.expected = expected
         self.actual = actual
         self.message = message
+        self.diff_lines = diff_lines or []
+
+
+def create_intelligent_diff(expected: Any, actual: Any) -> List[str]:
+    """Create intelligent diff based on the types of expected and actual values."""
+    
+    # Handle None values
+    if expected is None or actual is None:
+        return [f"Expected: {repr(expected)}", f"Got: {repr(actual)}"]
+    
+    # Dictionary/Object differences
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        return _create_dict_diff(expected, actual)
+    
+    # List/Array differences
+    if isinstance(expected, (list, tuple)) and isinstance(actual, (list, tuple)):
+        return _create_list_diff(expected, actual)
+    
+    # String differences
+    if isinstance(expected, str) and isinstance(actual, str):
+        return _create_string_diff(expected, actual)
+    
+    # Number differences
+    if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
+        return _create_number_diff(expected, actual)
+    
+    # Default fallback
+    return [f"Expected: {repr(expected)}", f"Got: {repr(actual)}"]
+
+
+def _create_dict_diff(expected: dict, actual: dict) -> List[str]:
+    """Create detailed diff for dictionaries."""
+    lines = ["Dictionary differences:"]
+    
+    all_keys = set(expected.keys()) | set(actual.keys())
+    
+    for key in sorted(all_keys):
+        if key in expected and key in actual:
+            if expected[key] == actual[key]:
+                lines.append(f"  ✓ {key}: {repr(actual[key])}")
+            else:
+                lines.append(f"  ✗ {key}: expected {repr(expected[key])}, got {repr(actual[key])}")
+        elif key in expected:
+            lines.append(f"  - {key} (expected but not found)")
+        else:
+            lines.append(f"  + {key}: {repr(actual[key])} (not in expected)")
+    
+    return lines
+
+
+def _create_list_diff(expected: list, actual: list) -> List[str]:
+    """Create detailed diff for lists."""
+    lines = ["List differences:"]
+    
+    if len(expected) != len(actual):
+        lines.append(f"Length: expected {len(expected)} items, got {len(actual)}")
+        lines.append("")
+    
+    max_len = max(len(expected), len(actual))
+    
+    for i in range(max_len):
+        if i < len(expected) and i < len(actual):
+            if expected[i] == actual[i]:
+                lines.append(f"  [{i}] ✓ {repr(actual[i])}")
+            else:
+                lines.append(f"  [{i}] ✗ expected {repr(expected[i])}, got {repr(actual[i])}")
+        elif i < len(expected):
+            lines.append(f"  [{i}] - {repr(expected[i])} (expected but missing)")
+        else:
+            lines.append(f"  [{i}] + {repr(actual[i])} (unexpected)")
+    
+    return lines
+
+
+def _create_string_diff(expected: str, actual: str) -> List[str]:
+    """Create detailed diff for strings."""
+    lines = [f"Expected: \"{expected}\"", f"Got:      \"{actual}\""]
+    
+    # Find first difference
+    for i, (e_char, a_char) in enumerate(zip(expected, actual)):
+        if e_char != a_char:
+            pointer = " " * (10 + i) + "^"  # 10 chars for "Got:      \""
+            lines.append(pointer)
+            lines.append(f"First difference at position {i}: expected '{e_char}' but got '{a_char}'")
+            break
+    else:
+        # No differences in common part, check lengths
+        if len(expected) != len(actual):
+            min_len = min(len(expected), len(actual))
+            if len(expected) > len(actual):
+                lines.append(f"Expected string is longer by {len(expected) - len(actual)} characters")
+            else:
+                lines.append(f"Actual string is longer by {len(actual) - len(expected)} characters")
+    
+    return lines
+
+
+def _create_number_diff(expected: Union[int, float], actual: Union[int, float]) -> List[str]:
+    """Create detailed diff for numbers."""
+    lines = [f"Expected: {expected}", f"Got: {actual}"]
+    
+    difference = actual - expected
+    if difference > 0:
+        lines.append(f"Difference: +{difference}")
+    else:
+        lines.append(f"Difference: {difference}")
+    
+    return lines
 
 
 class ThatAssertion:
@@ -28,10 +137,12 @@ class ThatAssertion:
     def equals(self, expected: Any) -> 'ThatAssertion':
         """Assert that the value equals the expected value."""
         if self.value != expected:
+            diff_lines = create_intelligent_diff(expected, self.value)
             raise AssertionError(
                 f"{self.expression}.equals({repr(expected)})",
                 expected=expected,
-                actual=self.value
+                actual=self.value,
+                diff_lines=diff_lines
             )
         return self
     

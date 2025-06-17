@@ -7,7 +7,7 @@ Handles test registration, discovery, and execution.
 import inspect
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Set
 from .assertions import AssertionError
 
 
@@ -27,14 +27,14 @@ class TestSuite:
     
     def __init__(self, name: str):
         self.name = name
-        self.tests: List[Tuple[str, Callable]] = []
+        self.tests: List[Tuple[str, Callable, int]] = []  # Added line number
         self.setup_func: Optional[Callable] = None
         self.teardown_func: Optional[Callable] = None
         self.setup_result: Any = None
     
-    def add_test(self, name: str, func: Callable):
-        """Add a test to this suite."""
-        self.tests.append((name, func))
+    def add_test(self, name: str, func: Callable, line_number: int):
+        """Add a test to this suite with its line number."""
+        self.tests.append((name, func, line_number))
     
     def set_setup(self, func: Callable):
         """Set the setup function for this suite."""
@@ -51,14 +51,22 @@ class TestRegistry:
     def __init__(self):
         self.suites: Dict[str, TestSuite] = {}
         self.current_suite: Optional[TestSuite] = None
-        self.standalone_tests: List[Tuple[str, Callable]] = []
+        self.standalone_tests: List[Tuple[str, Callable, int]] = []  # Added line number
+        self.test_file_map: Dict[str, List[Tuple[str, int, Optional[str]]]] = {}  # file -> [(test_name, line, suite)]
     
-    def add_test(self, name: str, func: Callable):
-        """Add a test to the current suite or standalone tests."""
+    def add_test(self, name: str, func: Callable, line_number: int, file_path: str):
+        """Add a test to the current suite or standalone tests with line info."""
+        suite_name = self.current_suite.name if self.current_suite else None
+        
+        # Store in file map for line number lookup
+        if file_path not in self.test_file_map:
+            self.test_file_map[file_path] = []
+        self.test_file_map[file_path].append((name, line_number, suite_name))
+        
         if self.current_suite:
-            self.current_suite.add_test(name, func)
+            self.current_suite.add_test(name, func, line_number)
         else:
-            self.standalone_tests.append((name, func))
+            self.standalone_tests.append((name, func, line_number))
     
     def create_suite(self, name: str) -> TestSuite:
         """Create a new test suite."""
@@ -75,21 +83,44 @@ class TestRegistry:
         tests = []
         
         # Add standalone tests
-        for name, func in self.standalone_tests:
+        for name, func, _ in self.standalone_tests:
             tests.append((None, name, func))
         
         # Add suite tests
         for suite_name, suite in self.suites.items():
-            for test_name, test_func in suite.tests:
+            for test_name, test_func, _ in suite.tests:
                 tests.append((suite_name, test_name, test_func))
         
         return tests
+    
+    def get_tests_by_line(self, file_path: str, line_numbers: Set[int]) -> List[str]:
+        """Get test names that match the given line numbers in a file."""
+        if file_path not in self.test_file_map:
+            return []
+        
+        matching_tests = []
+        file_tests = sorted(self.test_file_map[file_path], key=lambda x: x[1])  # Sort by line
+        
+        for line in line_numbers:
+            # Find the test at or just before this line
+            best_match = None
+            for test_name, test_line, suite_name in file_tests:
+                if test_line <= line:
+                    best_match = (test_name, test_line, suite_name)
+                else:
+                    break
+            
+            if best_match:
+                matching_tests.append(best_match[0])
+        
+        return list(set(matching_tests))  # Remove duplicates
     
     def clear(self):
         """Clear all registered tests and suites."""
         self.suites.clear()
         self.current_suite = None
         self.standalone_tests.clear()
+        self.test_file_map.clear()
 
 
 # Global test registry
@@ -99,7 +130,16 @@ _registry = TestRegistry()
 def test(description: str):
     """Decorator to register a test function."""
     def decorator(func: Callable):
-        _registry.add_test(description, func)
+        # Get the line number where the decorator was applied
+        frame = inspect.currentframe()
+        if frame and frame.f_back:
+            line_number = frame.f_back.f_lineno
+            file_path = frame.f_back.f_code.co_filename
+        else:
+            line_number = 0
+            file_path = "<unknown>"
+        
+        _registry.add_test(description, func, line_number, file_path)
         return func
     return decorator
 
@@ -202,7 +242,7 @@ class TestRunner:
                 return results
         
         # Run tests
-        for test_name, test_func in suite.tests:
+        for test_name, test_func, _ in suite.tests:
             result = self.run_test(test_name, test_func, setup_result)
             results.append(result)
         
@@ -229,7 +269,7 @@ class TestRunner:
         all_results = []
         
         # Run standalone tests
-        for test_name, test_func in _registry.standalone_tests:
+        for test_name, test_func, _ in _registry.standalone_tests:
             result = self.run_test(test_name, test_func)
             all_results.append(result)
         

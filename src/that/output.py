@@ -4,6 +4,7 @@ Output formatting for the That testing library.
 Handles formatting and display of test results.
 """
 
+import os
 import sys
 from typing import Dict, List, Optional
 from .runner import TestResult, TestRegistry
@@ -77,12 +78,12 @@ class TestFormatter:
         test_to_suite = {}
         
         # Map standalone tests
-        for test_name, _ in registry.standalone_tests:
+        for test_name, _, _ in registry.standalone_tests:
             test_to_suite[test_name] = None
         
         # Map suite tests
         for suite_name, suite in registry.suites.items():
-            for test_name, _ in suite.tests:
+            for test_name, _, _ in suite.tests:
                 test_to_suite[test_name] = suite_name
         
         # Group results
@@ -122,7 +123,11 @@ class TestFormatter:
             lines.append(f"    {error.message}")
             lines.append("")
             
-            if hasattr(error, 'expected') and hasattr(error, 'actual'):
+            # Use intelligent diff if available
+            if hasattr(error, 'diff_lines') and error.diff_lines:
+                for diff_line in error.diff_lines:
+                    lines.append(f"    {diff_line}")
+            elif hasattr(error, 'expected') and hasattr(error, 'actual'):
                 lines.append(f"    Expected: {self._format_value(error.expected)}")
                 lines.append(f"    Actual:   {self._format_value(error.actual)}")
             
@@ -223,5 +228,3 @@ def format_diff(expected, actual) -> List[str]:
     return lines
 
 
-# Make os available for color detection
-import os
