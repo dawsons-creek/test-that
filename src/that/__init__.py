@@ -5,7 +5,7 @@ Because test output should tell you what failed, not make you guess.
 
 Usage:
     from that import test, suite, that
-    
+
     @test("user age is correct")
     def test_user_age():
         user = {"name": "John", "age": 30}
