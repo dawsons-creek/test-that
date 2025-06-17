@@ -215,7 +215,9 @@ class TestRunner:
         self, test_name: str, test_func: Callable, setup_result: Any = None
     ) -> TestResult:
         """Run a single test function (supports both sync and async)."""
-        start_time = time.time()
+        from .mocking import cleanup_mocks
+        
+        start_time = time.perf_counter()
 
         try:
             args = _prepare_test_arguments(test_func, setup_result)
@@ -225,12 +227,14 @@ class TestRunner:
             else:
                 test_func(*args)
 
-            duration = time.time() - start_time
+            duration = time.perf_counter() - start_time
             return TestResult(test_name, True, duration=duration)
 
         except Exception as e:
-            duration = time.time() - start_time
+            duration = time.perf_counter() - start_time
             return TestResult(test_name, False, error=e, duration=duration)
+        finally:
+            cleanup_mocks()
 
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""

@@ -16,6 +16,7 @@ from .assertions import that
 from .runner import test, suite
 from .replay import replay
 from .tags import tag, slow, integration, unit, requires_network, requires_db, smoke
+from .mocking import mock, mock_that
 
 __version__ = "0.2.0"
-__all__ = ["test", "suite", "that", "replay", "tag", "slow", "integration", "unit", "requires_network", "requires_db", "smoke"]
+__all__ = ["test", "suite", "that", "replay", "tag", "slow", "integration", "unit", "requires_network", "requires_db", "smoke", "mock", "mock_that"]

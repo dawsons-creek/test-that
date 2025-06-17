@@ -110,9 +110,9 @@ class TestFormatter:
 
             # Always show timing for slow tests, optionally for all tests in verbose mode
             if result.is_slow():
-                line += f" ({result.duration:.3f}s) {Colors.YELLOW}[SLOW]{Colors.RESET}"
+                line += f" ({self._format_duration(result.duration)}) {Colors.YELLOW}[SLOW]{Colors.RESET}"
             elif self.verbose:
-                line += f" ({result.duration:.3f}s)"
+                line += f" ({self._format_duration(result.duration)})"
 
             return line
         else:
@@ -171,6 +171,15 @@ class TestFormatter:
         else:
             return str(value)
 
+    def _format_duration(self, duration: float) -> str:
+        """Format duration with appropriate precision and units."""
+        if duration >= 1.0:
+            return f"{duration:.3f}s"
+        elif duration >= 0.001:
+            return f"{duration * 1000:.1f}ms"
+        else:
+            return f"{duration * 1000000:.0f}μs"
+
     def _format_summary(self, results: List[TestResult]) -> str:
         """Format the test summary."""
         total = len(results)
@@ -180,7 +189,7 @@ class TestFormatter:
 
         lines = []
         lines.append("─" * 40)
-        lines.append(f"Ran {total} tests in {total_time:.3f}s")
+        lines.append(f"Ran {total} tests in {self._format_duration(total_time)}")
 
         if failed == 0:
             lines.append(f"{Colors.GREEN}{passed} passed{Colors.RESET}")
