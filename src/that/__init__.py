@@ -14,8 +14,7 @@ Usage:
 
 from .assertions import that
 from .runner import test, suite
-from .time_freeze import frozen_at
-from .http_recording import recorded
+from .replay import replay
 
-__version__ = "0.1.0"
-__all__ = ["test", "suite", "that", "frozen_at", "recorded"]
+__version__ = "0.2.0"
+__all__ = ["test", "suite", "that", "replay"]

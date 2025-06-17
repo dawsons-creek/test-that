@@ -1,7 +1,7 @@
 """
 Time freezing functionality for deterministic testing.
 
-Provides the @frozen_at decorator to freeze time during test execution.
+Provides both the legacy @frozen_at decorator and the new TimeFreeze class.
 """
 
 import datetime
@@ -9,44 +9,65 @@ import functools
 from typing import Callable, Union
 from unittest.mock import patch
 
+# Constants
+NANOSECONDS_PER_SECOND = 1_000_000_000
 
-def frozen_at(frozen_time: Union[str, datetime.datetime]):
+
+class TimeFreeze:
     """
-    Decorator to freeze time during test execution.
-
-    Args:
-        frozen_time: Either an ISO string like "2024-01-01T00:00:00Z"
-                    or a datetime object
-
-    Example:
-        @test("user created at midnight")
-        @frozen_at("2024-01-01T00:00:00Z")
-        def test_user_creation():
-            user = create_user()
-            that(user.created_at).equals(datetime(2024, 1, 1, 0, 0, 0))
+    Core time freezing functionality that can be reused by different APIs.
     """
-
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            # Convert string to datetime if needed
-            if isinstance(frozen_time, str):
+    
+    def __init__(self, frozen_time: Union[str, datetime.datetime]):
+        """
+        Initialize time freezer.
+        
+        Args:
+            frozen_time: Either an ISO string like "2024-01-01T00:00:00Z"
+                        or a datetime object
+        """
+        self.frozen_time = self._parse_time(frozen_time)
+    
+    def _parse_time(self, frozen_time: Union[str, datetime.datetime]) -> datetime.datetime:
+        """Convert string to datetime if needed."""
+        if isinstance(frozen_time, str):
+            try:
                 # Parse ISO format
                 if frozen_time.endswith("Z"):
-                    dt = datetime.datetime.fromisoformat(frozen_time[:-1] + "+00:00")
+                    return datetime.datetime.fromisoformat(frozen_time[:-1] + "+00:00")
                 else:
-                    dt = datetime.datetime.fromisoformat(frozen_time)
-            else:
-                dt = frozen_time
-
+                    return datetime.datetime.fromisoformat(frozen_time)
+            except ValueError as e:
+                raise ValueError(f"Invalid ISO datetime string: {frozen_time}") from e
+        elif isinstance(frozen_time, datetime.datetime):
+            return frozen_time
+        else:
+            raise TypeError(f"Expected str or datetime, got {type(frozen_time)}")
+    
+    def freeze_during(self, func: Callable) -> Callable:
+        """
+        Return a wrapped version of func that executes with frozen time.
+        
+        Args:
+            func: Function to execute with frozen time
+            
+        Returns:
+            Wrapped function
+        """
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            dt = self.frozen_time
+            
             # Create mock return values
             mock_now = dt
+            # Fix timezone conversion logic
             mock_utcnow = (
-                dt.replace(tzinfo=datetime.timezone.utc) if dt.tzinfo is None else dt
+                dt.astimezone(datetime.timezone.utc) if dt.tzinfo
+                else dt.replace(tzinfo=datetime.timezone.utc)
             )
             mock_timestamp = dt.timestamp()
 
-            # Store original datetime class to avoid recursion
+            # Store original classes to avoid recursion
             original_datetime = datetime.datetime
             original_date = datetime.date
 
@@ -54,7 +75,9 @@ def frozen_at(frozen_time: Union[str, datetime.datetime]):
             with patch("datetime.datetime") as mock_datetime, patch(
                 "datetime.date"
             ) as mock_date, patch("time.time", return_value=mock_timestamp), patch(
-                "time.time_ns", return_value=int(mock_timestamp * 1_000_000_000)
+                "time.time_ns", return_value=int(mock_timestamp * NANOSECONDS_PER_SECOND)
+            ), patch("time.gmtime", return_value=mock_utcnow.timetuple()), patch(
+                "time.localtime", return_value=mock_now.timetuple()
             ):
 
                 # Configure datetime mock to avoid recursion
@@ -89,4 +112,5 @@ def frozen_at(frozen_time: Union[str, datetime.datetime]):
 
         return wrapper
 
-    return decorator
+
+
