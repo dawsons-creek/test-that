@@ -197,6 +197,28 @@ def main():
         action="store_true",
         help="Watch mode (re-run tests when files change)",
     )
+    
+    parser.add_argument(
+        "--include-tags",
+        help="Run only tests with these tags (comma-separated)",
+    )
+    
+    parser.add_argument(
+        "--exclude-tags", 
+        help="Skip tests with these tags (comma-separated)",
+    )
+    
+    parser.add_argument(
+        "--skip-slow",
+        action="store_true",
+        help="Skip tests tagged as 'slow' (shortcut for --exclude-tags=slow)",
+    )
+    
+    parser.add_argument(
+        "--focus",
+        action="store_true",
+        help="Focus mode - show only failures with full context",
+    )
 
     args = parser.parse_args()
 
@@ -395,12 +417,27 @@ def main():
             for test_name, test_func in tests:
                 suite.add_test(test_name, test_func, 0)
 
+    # Parse tag filters
+    include_tags = None
+    exclude_tags = None
+    
+    if args.include_tags:
+        include_tags = set(tag.strip() for tag in args.include_tags.split(','))
+    
+    if args.exclude_tags:
+        exclude_tags = set(tag.strip() for tag in args.exclude_tags.split(','))
+    
+    if args.skip_slow:
+        if exclude_tags is None:
+            exclude_tags = set()
+        exclude_tags.add('slow')
+    
     # Run tests
-    runner = TestRunner(verbose=verbose)
+    runner = TestRunner(verbose=verbose, include_tags=include_tags, exclude_tags=exclude_tags)
     results = runner.run_all()
 
     # Format and display results
-    formatter = TestFormatter(use_color=use_color, verbose=verbose)
+    formatter = TestFormatter(use_color=use_color, verbose=verbose, focus_mode=args.focus)
     output = formatter.format_results(results, registry)
     print(output)
 

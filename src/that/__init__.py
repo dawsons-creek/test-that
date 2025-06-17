@@ -15,6 +15,7 @@ Usage:
 from .assertions import that
 from .runner import test, suite
 from .replay import replay
+from .tags import tag, slow, integration, unit, requires_network, requires_db, smoke
 
 __version__ = "0.2.0"
-__all__ = ["test", "suite", "that", "replay"]
+__all__ = ["test", "suite", "that", "replay", "tag", "slow", "integration", "unit", "requires_network", "requires_db", "smoke"]

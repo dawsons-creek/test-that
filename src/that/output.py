@@ -35,9 +35,10 @@ class Colors:
 class TestFormatter:
     """Formats test results for display."""
 
-    def __init__(self, use_color: bool = True, verbose: bool = False):
+    def __init__(self, use_color: bool = True, verbose: bool = False, focus_mode: bool = False):
         self.use_color = use_color
         self.verbose = verbose
+        self.focus_mode = focus_mode
 
         if not use_color or not self._supports_color():
             Colors.disable()
@@ -54,6 +55,10 @@ class TestFormatter:
     def format_results(self, results: List[TestResult], registry: TestRegistry) -> str:
         """Format all test results for display."""
         output = []
+
+        # In focus mode, show only failures with context
+        if self.focus_mode:
+            return self._format_focused_results(results, registry)
 
         # Group results by suite
         suite_results = self._group_by_suite(results, registry)
@@ -193,6 +198,66 @@ class TestFormatter:
             lines.append(f"{Colors.RED}{Colors.BOLD}FAILED{Colors.RESET}")
 
         return "\n".join(lines)
+    
+    def _format_focused_results(self, results: List[TestResult], registry: TestRegistry) -> str:
+        """Format results in focus mode - show only failures with context."""
+        output = []
+        passed = []
+        failed = []
+        
+        for result in results:
+            if result.passed:
+                passed.append(result)
+            else:
+                failed.append(result)
+        
+        # Show brief summary of passed tests
+        if passed:
+            for result in passed:
+                output.append(f"{Colors.GREEN}✓{Colors.RESET} {result.name}")
+        
+        # Show detailed failure information
+        if failed:
+            if passed:
+                output.append("")  # Blank line between passed and failed
+            
+            for result in failed:
+                output.append(f"{Colors.RED}✗{Colors.RESET} {result.name}")
+                output.append("")
+                
+                if result.error:
+                    # Show the assertion that failed
+                    if isinstance(result.error, AssertionError) and hasattr(result.error, 'message'):
+                        output.append(f"  {result.error.message}")
+                        output.append("")
+                    
+                    # Show error details
+                    error_lines = self._format_error(result.error)
+                    output.extend(error_lines)
+                    
+                    # Add context section
+                    output.append("")
+                    output.append("  Context:")
+                    
+                    # Try to extract local variables from the test
+                    import traceback
+                    tb = traceback.extract_tb(result.error.__traceback__)
+                    for frame in tb:
+                        if "test_" in frame.filename:
+                            output.append(f"    File: {frame.filename}:{frame.lineno}")
+                            output.append(f"    Function: {frame.name}")
+                            if frame.locals:
+                                for var, value in frame.locals.items():
+                                    if not var.startswith('_'):
+                                        output.append(f"    {var} = {repr(value)}")
+                            break
+                    
+                output.append("")
+        
+        # Add summary
+        output.append(self._format_summary(results))
+        
+        return "\n".join(output)
 
 
 def format_diff(expected, actual) -> List[str]:

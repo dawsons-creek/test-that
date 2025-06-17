@@ -4,6 +4,7 @@ Test runner and discovery for the That testing library.
 Handles test registration, discovery, and execution.
 """
 
+import asyncio
 import inspect
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Set
@@ -203,14 +204,17 @@ def suite(name: str):
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, include_tags: Set[str] = None, 
+                 exclude_tags: Set[str] = None):
         self.verbose = verbose
         self.results: List[TestResult] = []
+        self.include_tags = include_tags
+        self.exclude_tags = exclude_tags
 
     def run_test(
         self, test_name: str, test_func: Callable, setup_result: Any = None
     ) -> TestResult:
-        """Run a single test function."""
+        """Run a single test function (supports both sync and async)."""
         start_time = time.time()
 
         try:
@@ -218,16 +222,32 @@ class TestRunner:
             sig = inspect.signature(test_func)
             params = list(sig.parameters.values())
 
+            # Determine if test is async
+            is_async = asyncio.iscoroutinefunction(test_func)
+
+            # Prepare arguments
             if len(params) > 0 and setup_result is not None:
-                # Test function has parameters and we have setup result, pass it
-                test_func(setup_result)
-            elif len(params) == 0:
-                # Test function has no parameters, call without arguments
-                test_func()
+                args = (setup_result,)
             else:
-                # Test function has parameters but no setup result
-                # This shouldn't happen in a suite with setup, but handle gracefully
-                test_func()
+                args = ()
+
+            # Run the test
+            if is_async:
+                # Run async test
+                try:
+                    # Try to get existing event loop
+                    asyncio.get_running_loop()
+                    # We're already in an async context, run synchronously
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, test_func(*args))
+                        future.result()
+                except RuntimeError:
+                    # No event loop running, create one
+                    asyncio.run(test_func(*args))
+            else:
+                # Run sync test
+                test_func(*args)
 
             duration = time.time() - start_time
             return TestResult(test_name, True, duration=duration)
@@ -257,9 +277,14 @@ class TestRunner:
                 return results
 
         # Run tests
+        from .tags import get_tag_registry
+        tag_registry = get_tag_registry()
+        
         for test_name, test_func, _ in suite.tests:
-            result = self.run_test(test_name, test_func, setup_result)
-            results.append(result)
+            # Check if test should run based on tags
+            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
+                result = self.run_test(test_name, test_func, setup_result)
+                results.append(result)
 
         # Run teardown if present
         if suite.teardown_func:
@@ -281,12 +306,17 @@ class TestRunner:
 
     def run_all(self) -> List[TestResult]:
         """Run all registered tests."""
+        from .tags import get_tag_registry
+        tag_registry = get_tag_registry()
+        
         all_results = []
 
         # Run standalone tests
         for test_name, test_func, _ in _registry.standalone_tests:
-            result = self.run_test(test_name, test_func)
-            all_results.append(result)
+            # Check if test should run based on tags
+            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
+                result = self.run_test(test_name, test_func)
+                all_results.append(result)
 
         # Run suite tests
         for suite_name, suite in _registry.suites.items():

@@ -64,7 +64,6 @@ class TimeContextOrDecorator:
 
             # Import required modules
             import datetime as dt_module
-            import time
             from unittest.mock import patch
             from that.time_freeze import NANOSECONDS_PER_SECOND
 
