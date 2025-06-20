@@ -51,6 +51,15 @@ uv run tt examples/todo_cli/tests/integration
 # Run tests for a specific module
 uv run tt examples/todo_cli/tests/unit/test_models.py
 
+# Run specific test by line number
+uv run tt examples/todo_cli/tests/unit/test_models.py:42
+
+# Run tests in a specific range
+uv run tt examples/todo_cli/tests/unit/test_models.py:20-50
+
+# Run tests matching a pattern
+uv run tt examples/todo_cli/tests -k "validation"
+
 # Run tests in verbose mode
 uv run tt examples/todo_cli/tests -v
 ```

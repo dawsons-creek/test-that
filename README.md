@@ -53,8 +53,9 @@ tt
 # Run specific test file
 tt tests/test_user.py
 
-# Run specific suite
-tt -s "User Management"
+# Target specific tests (see Precise Test Targeting section)
+tt -k "validation"           # Pattern matching
+tt -s "User Management"      # Suite filtering
 
 # Verbose mode (includes stack traces)
 tt -v
@@ -107,6 +108,38 @@ with suite("Database Tests"):
         user = db.insert_user("john@example.com")
         that(user.id).equals(1)
 ```
+
+## Precise Test Targeting
+
+Test That supports running specific tests with surgical precision:
+
+### Pattern Matching (Available Now)
+```bash
+# Run tests with names containing "validation"
+tt -k "validation"
+
+# Run specific test suite
+tt -s "User Management"
+
+# Run tests matching multiple patterns
+tt -k "email" -k "validation"
+```
+
+### Line Number Targeting (Coming Soon)
+```bash
+# These features are implemented but need CLI argument parsing fixes
+
+# Run test at specific line
+tt tests/test_user.py:42
+
+# Run tests in a range 
+tt tests/test_user.py:20-50
+
+# Run multiple specific lines
+tt tests/test_user.py:15,30,45
+```
+
+The pattern matching and suite filtering make debugging much faster by running only the tests you're working on.
 
 ## Assertion API
 
