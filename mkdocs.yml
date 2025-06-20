@@ -1,0 +1,181 @@
+site_name: "Test That - Python Testing Framework"
+site_description: "A Python testing library that tells you what failed, not makes you guess"
+site_url: https://github.com/dawsons-creek/test-that
+repo_url: https://github.com/dawsons-creek/test-that
+repo_name: test-that
+
+theme:
+  name: material
+  language: en
+  favicon: assets/favicon.png
+  logo: assets/logo.png
+  
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.prune
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - search.share
+    - header.autohide
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - content.tooltips
+    - content.tabs.link
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 80
+            merge_init_into_class: true
+            show_if_no_docstring: false
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section for reference
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dawsons-creek/test-that
+  
+  version:
+    provider: mike
+    default: stable
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Your First Test: getting-started/first-test.md
+    - Quick Start: getting-started/quickstart.md
+    - Why Test That?: getting-started/why-test-that.md
+  - User Guide:
+    - Writing Tests: guide/writing-tests.md
+    - Assertions: guide/assertions.md
+    - Test Organization: guide/organization.md
+    - Running Tests: guide/running-tests.md
+    - Configuration: guide/configuration.md
+  - Features:
+    - Fluent Assertions: features/fluent-assertions.md
+    - Error Messages: features/error-messages.md
+    - Mocking System: features/mocking.md
+    - Time Control: features/time-control.md
+    - HTTP Recording: features/http-recording.md
+    - Test Tagging: features/test-tagging.md
+    - Test Discovery: features/test-discovery.md
+    - Output Formatting: features/output-formatting.md
+    - CLI Options: features/cli-options.md
+  - Examples:
+    - Basic Examples: examples/basic.md
+    - Test Fixtures: examples/fixtures.md
+    - Web API Testing: examples/web-api-testing.md
+    - Database Testing: examples/database-testing.md
+    - Async Testing: examples/async-testing.md
+    - Advanced Patterns: examples/advanced.md
+    - Real World: examples/real-world.md
+  - API Reference:
+    - that: api/that.md
+    - Assertions: api/assertions.md
+    - Mocking: api/mocking.md
+    - Replay: api/replay.md
+    - Decorators: api/decorators.md
+    - Runner: api/runner.md
+  - Migration:
+    - From pytest: migration/from-pytest.md
+    - From unittest: migration/from-unittest.md
+    - Common Patterns: migration/common-patterns.md
+  - Contributing:
+    - Development Setup: contributing/setup.md
+    - Guidelines: contributing/guidelines.md

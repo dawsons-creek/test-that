@@ -231,6 +231,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Focus mode - show only failures with full context"
     )
 
+    parser.add_argument(
+        "--setup-pycharm", action="store_true",
+        help="Set up PyCharm integration for this project"
+    )
+
     return parser
 
 
@@ -480,6 +485,15 @@ def main():
     parser = create_argument_parser()
     args = parser.parse_args()
     config = load_config()
+
+    if args.setup_pycharm:
+        try:
+            from .ide import setup_pycharm_integration
+            setup_pycharm_integration()
+            return 0
+        except ImportError:
+            print("PyCharm integration not available")
+            return 1
 
     if args.watch:
         print("Watch mode not implemented yet")

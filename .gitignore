@@ -228,8 +228,8 @@ htmlcov/
 .pytest_cache/
 .ruff_cache/
 
-# LLM instructions and development docs
-docs/
+# LLM instructions and AI docs
+ai_docs/
 
 # Claude Code files
 .claude/

@@ -1,11 +1,11 @@
-# That - A Python Testing Library
+# Test That - A Python Testing Library
 
 *Because test output should tell you what failed, not make you guess.*
 
 ## Installation
 
 ```bash
-pip install that
+pip install test-that
 ```
 
 ## Quick Start

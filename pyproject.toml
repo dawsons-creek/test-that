@@ -1,5 +1,5 @@
 [project]
-name = "that"
+name = "test-that"
 version = "0.1.0"
 description = "A Python testing library that tells you what failed, not makes you guess"
 readme = "README.md"
@@ -25,13 +25,19 @@ dependencies = [
     "pyyaml>=6.0.2",
 ]
 
+[project.optional-dependencies]
+pycharm = [
+    "pytest>=7.0.0",
+]
+
 [project.urls]
-Homepage = "https://github.com/yourusername/that"
-Repository = "https://github.com/yourusername/that"
-Issues = "https://github.com/yourusername/that/issues"
+Homepage = "https://github.com/dawsons-creek/test-that"
+Repository = "https://github.com/dawsons-creek/test-that"
+Issues = "https://github.com/dawsons-creek/test-that/issues"
 
 [project.scripts]
 that = "that.__main__:main"
+that-pycharm = "that.pycharm_runner:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -45,6 +51,10 @@ dev-dependencies = [
     "pytest>=7.0.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0",
+    "pymdown-extensions>=10.0",
 ]
 
 [tool.that]

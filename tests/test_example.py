@@ -4,7 +4,7 @@ Example tests for the That testing library.
 Demonstrates the basic usage and features.
 """
 
-from that import test, suite, that
+from that import test, suite, that, provide
 
 
 # Simple standalone tests
@@ -99,32 +99,38 @@ with suite("Exception Handling"):
         that(result.value).equals("safe")
 
 
-# Test with setup and teardown
+# Test with @provide fixtures (clear and explicit)
 with suite("Database Tests"):
-    def setup():
-        """Create a mock database."""
+    
+    @provide
+    def mock_db():
+        """Create a fresh mock database for each test."""
         return {"users": [], "next_id": 1}
     
-    def teardown(db):
-        """Clean up the database."""
-        db.clear()
-    
     @test("can add user")
-    def test_add_user(db):
-        user = {"id": db["next_id"], "name": "John"}
-        db["users"].append(user)
-        db["next_id"] += 1
+    def test_add_user():
+        # Clear where mock_db comes from - provided above with @provide
+        user = {"id": mock_db["next_id"], "name": "John"}
+        mock_db["users"].append(user)
+        mock_db["next_id"] += 1
 
-        that(db["users"]).has_length(1)
-        that(db["users"][0]["name"]).equals("John")
+        that(mock_db["users"]).has_length(1)
+        that(mock_db["users"][0]["name"]).equals("John")
 
-    @test("can find user")
-    def test_find_user(db):
-        # Add a user first
-        user = {"id": db["next_id"], "name": "Jane"}
-        db["users"].append(user)
+    @test("can find user") 
+    def test_find_user():
+        # Fresh mock_db instance per test - no setup needed
+        user = {"id": mock_db["next_id"], "name": "Jane"}
+        mock_db["users"].append(user)
 
         # Find the user
-        found = next((u for u in db["users"] if u["name"] == "Jane"), None)
+        found = next((u for u in mock_db["users"] if u["name"] == "Jane"), None)
         that(found).is_not_none()
         that(found["name"]).equals("Jane")
+    
+    @test("each test gets fresh database")
+    def test_database_isolation():
+        # This test should start with an empty database
+        # Even though previous tests added users
+        that(mock_db["users"]).is_empty()
+        that(mock_db["next_id"]).equals(1)
