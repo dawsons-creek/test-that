@@ -1,5 +1,5 @@
 [project]
-name = "that"
+name = "test-that"
 version = "0.1.0"
 description = "A Python testing library that tells you what failed, not makes you guess"
 readme = "README.md"
@@ -26,19 +26,21 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/that"
-Repository = "https://github.com/yourusername/that"
-Issues = "https://github.com/yourusername/that/issues"
+Homepage = "https://github.com/dawsons-creek/test-that"
+Repository = "https://github.com/dawsons-creek/test-that"
+Issues = "https://github.com/dawsons-creek/test-that/issues"
 
 [project.scripts]
-that = "that.__main__:main"
+that = "test_that.__main__:main"
+test_that = "test_that.__main__:main"
+tt = "test_that.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/that"]
+packages = ["src/test_that"]
 
 [tool.uv]
 dev-dependencies = [
@@ -47,8 +49,14 @@ dev-dependencies = [
     "ruff>=0.1.0",
 ]
 
-[tool.that]
+[tool.test_that]
 test_dir = "tests"
 pattern = "test_*.py"
 verbose = false
 color = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+norecursedirs = ["src", ".git", ".tox", "dist", "build", "*.egg"]

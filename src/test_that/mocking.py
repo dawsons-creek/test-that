@@ -177,7 +177,7 @@ def mock(obj: Any, attr_name: str, *,
     
     Example:
         # Common pattern: Mock an injected dependency
-        from that import test, that, mock
+        from test_that import test, that, mock
         
         @test("user service fetches data correctly")
         def test_user_service():
@@ -232,7 +232,7 @@ def mock_that(mock_obj: Mock):
         client.get('/users')
         
         # Can use with that() for more complex assertions
-        from that import that
+        from test_that import that
         that(mock_that(api_mock).call_count).equals(1)
         that(mock_that(api_mock).last_call.args).contains('/users')
     """

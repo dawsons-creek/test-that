@@ -1,17 +1,28 @@
-# That - A Python Testing Library
+# Test That - A Python Testing Library
 
 *Because test output should tell you what failed, not make you guess.*
 
 ## Installation
 
+This package is available on GitHub only (not published to PyPI):
+
 ```bash
-pip install that
+# Install from GitHub
+pip install git+ssh://git@github.com/dawsons-creek/test-that.git
+
+# Or with uv
+uv add git+ssh://git@github.com/dawsons-creek/test-that.git
+
+# For development
+git clone git@github.com:dawsons-creek/test-that.git
+cd test-that
+uv sync
 ```
 
 ## Quick Start
 
 ```python
-from that import test, suite, that
+from test_that import test, suite, that
 
 @test("user age is correct")
 def test_user_age():
@@ -31,21 +42,25 @@ When this fails, you see:
 
 ## Running Tests
 
+Multiple CLI commands are available for convenience:
+
 ```bash
-# Run all tests
-that
+# Run all tests (any of these work)
+test_that
+that  
+tt
 
 # Run specific test file
-that tests/test_user.py
+tt tests/test_user.py
 
 # Run specific suite
-that -s "User Management"
+tt -s "User Management"
 
 # Verbose mode (includes stack traces)
-that -v
+tt -v
 
 # Disable colors
-that --no-color
+tt --no-color
 ```
 
 ## Core Features
@@ -53,7 +68,7 @@ that --no-color
 ### Simple Test Definition
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("basic math works")
 def test_math():
@@ -63,7 +78,7 @@ def test_math():
 ### Test Suites
 
 ```python
-from that import suite, test, that
+from test_that import suite, test, that
 
 with suite("String Operations"):
     @test("uppercase conversion")
@@ -175,7 +190,7 @@ uv run that tests/test_example.py
 
 ## Design Principles
 
-1. **One import**: `from that import test, suite, that`
+1. **One import**: `from test_that import test, suite, that`
 2. **One way to do things**: No alternative APIs
 3. **Clear over clever**: Readable code over magic
 4. **Fast feedback**: Show what failed immediately

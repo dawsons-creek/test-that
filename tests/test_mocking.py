@@ -1,6 +1,6 @@
 """Tests for the mocking functionality."""
 
-from that import test, suite, that, mock, mock_that
+from test_that import test, suite, that, mock, mock_that
 
 
 # Example classes to test mocking with

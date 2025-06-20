@@ -78,7 +78,7 @@ class TimeContextOrDecorator:
     def _create_and_start_patches(self, mock_values: dict):
         """Create and start all time-related patches."""
         from unittest.mock import patch
-        from that.time_freeze import NANOSECONDS_PER_SECOND
+        from test_that.time_freeze import NANOSECONDS_PER_SECOND
 
         self._datetime_patch = patch("datetime.datetime")
         self._date_patch = patch("datetime.date")

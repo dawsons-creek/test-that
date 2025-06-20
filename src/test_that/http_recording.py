@@ -2,6 +2,7 @@
 HTTP recording functionality for deterministic testing.
 
 Records HTTP requests and responses to YAML files for replay in tests.
+Includes security sanitization to prevent credential leakage.
 """
 
 import base64
@@ -12,15 +13,23 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List
 from unittest.mock import patch, MagicMock
 
+try:
+    from .plugins.security import default_sanitizer
+except ImportError:
+    # Fallback if plugins not available
+    default_sanitizer = None
+
 
 class HTTPRecorder:
     """Records and replays HTTP requests."""
 
-    def __init__(self, cassette_name: str, record_mode: str = "once", recordings_dir: str = "tests/recordings"):
+    def __init__(self, cassette_name: str, record_mode: str = "once", recordings_dir: str = "tests/recordings", 
+                 sanitize: bool = True):
         self.cassette_name = cassette_name
         self.record_mode = record_mode
         self.cassette_path = Path(recordings_dir) / f"{cassette_name}.yaml"
         self.interactions = []
+        self.sanitize = sanitize and default_sanitizer is not None
 
     def _ensure_cassette_dir(self):
         """Ensure the cassettes directory exists."""
@@ -80,7 +89,7 @@ class HTTPRecorder:
     def _record_interaction(
         self, method: str, url: str, headers: Dict, body: Any, response
     ):
-        """Record a new interaction."""
+        """Record a new interaction with optional sanitization."""
         # Handle binary vs text content
         try:
             response_body = response.text
@@ -103,6 +112,11 @@ class HTTPRecorder:
                 "is_binary": is_binary,
             },
         }
+        
+        # Apply sanitization if enabled
+        if self.sanitize and default_sanitizer:
+            interaction = default_sanitizer.sanitize_interaction(interaction)
+        
         self.interactions.append(interaction)
         self._save_cassette()
 

@@ -1,6 +1,6 @@
 """Test file to demonstrate line number test selection."""
 
-from that import test, suite, that
+from test_that import test, suite, that
 
 
 @test("test at line 7")

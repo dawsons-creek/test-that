@@ -161,7 +161,7 @@ def load_config() -> dict:
             with open(pyproject_path, "rb") as f:
                 data = tomllib.load(f)
 
-            tool_config = data.get("tool", {}).get("that", {})
+            tool_config = data.get("tool", {}).get("test_that", {})
             config.update(tool_config)
 
         except Exception as e:
@@ -173,7 +173,7 @@ def load_config() -> dict:
 def create_argument_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
-        description="That - A Python testing library", prog="that"
+        description="Test That - A Python testing library", prog="test_that"
     )
 
     parser.add_argument(
@@ -230,6 +230,19 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--focus", action="store_true",
         help="Focus mode - show only failures with full context"
     )
+
+    # Plugin management subcommand
+    subparsers = parser.add_subparsers(dest='subcommand', help='Additional commands')
+    plugin_parser = subparsers.add_parser('plugins', help='Manage plugins')
+    plugin_parser.add_argument('plugin_args', nargs='*', help='Plugin command arguments')
+
+    create_parser = subparsers.add_parser('create-plugin', help='Create a new plugin')
+    create_parser.add_argument('name', help='Plugin name')
+    create_parser.add_argument('type', choices=['decorator', 'assertion', 'lifecycle'],
+                              help='Plugin type')
+    create_parser.add_argument('--description', help='Plugin description')
+    create_parser.add_argument('--author', default='Unknown', help='Plugin author')
+    create_parser.add_argument('--output-dir', default='.', help='Output directory')
 
     return parser
 
@@ -479,6 +492,27 @@ def main():
     """Main CLI entry point."""
     parser = create_argument_parser()
     args = parser.parse_args()
+    
+    # Handle plugin subcommands
+    if hasattr(args, 'subcommand') and args.subcommand:
+        if args.subcommand == 'plugins':
+            from .plugins.cli import main as plugin_cli_main
+            return plugin_cli_main(args.plugin_args)
+        elif args.subcommand == 'create-plugin':
+            from .plugins.toolkit import PluginTemplate
+            template = PluginTemplate()
+            try:
+                template.create_plugin(
+                    args.name, args.type, 
+                    args.description or f"A {args.type} plugin",
+                    args.author, args.output_dir
+                )
+                print(f"Plugin '{args.name}' created successfully!")
+                return 0
+            except Exception as e:
+                print(f"Error creating plugin: {e}")
+                return 1
+    
     config = load_config()
 
     if args.watch:
