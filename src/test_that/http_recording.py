@@ -9,7 +9,7 @@ import base64
 import functools
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 from unittest.mock import MagicMock, patch
 
 import yaml
@@ -60,7 +60,7 @@ class HTTPRecorder:
 
     def _find_matching_interaction(
         self, method: str, url: str, headers: Dict, body: Any
-    ) -> Dict:
+    ) -> Optional[Dict]:
         """Find a matching recorded interaction."""
         for interaction in self.interactions:
             request = interaction["request"]
@@ -186,10 +186,10 @@ class HTTPRecorder:
     def record_during(self, func: Callable) -> Callable:
         """
         Return a wrapped version of func that executes with HTTP recording.
-        
+
         Args:
             func: Function to execute with HTTP recording
-            
+
         Returns:
             Wrapped function
         """

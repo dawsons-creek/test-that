@@ -68,7 +68,7 @@ def test_mock_raises():
 def test_mock_side_effect_list():
     db = Database()
 
-    query_mock = mock(db, "query", side_effect=[
+    mock(db, "query", side_effect=[
         [{"id": 1}],
         [{"id": 2}],
         [{"id": 3}]

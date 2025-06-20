@@ -58,7 +58,7 @@ _tag_registry = TestTags()
 def tag(*tags: str):
     """
     Decorator to add tags to a test.
-    
+
     Example:
         @test("network test")
         @tag("slow", "requires_network")

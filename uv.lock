@@ -395,6 +395,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.dev-dependencies]
@@ -408,7 +409,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pyyaml", specifier = ">=6.0.2" }]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=1.2.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [

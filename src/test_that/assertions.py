@@ -38,7 +38,7 @@ def create_intelligent_diff(expected: Any, actual: Any) -> List[str]:
 
     # List/Array differences
     if isinstance(expected, (list, tuple)) and isinstance(actual, (list, tuple)):
-        return _create_list_diff(expected, actual)
+        return _create_list_diff(list(expected), list(actual))
 
     # String differences
     if isinstance(expected, str) and isinstance(actual, str):
@@ -258,7 +258,7 @@ class ThatAssertion:
                 f"{self.expression}.contains({repr(item)})",
                 expected=f"collection containing {repr(item)}",
                 actual=f"{type(self.value).__name__} (not iterable)",
-            )
+            ) from None
         return self
 
     def does_not_contain(self, item: Any) -> "ThatAssertion":
@@ -289,7 +289,7 @@ class ThatAssertion:
                 f"{self.expression}.is_empty()",
                 expected="empty collection",
                 actual=f"{type(self.value).__name__} (no length)",
-            )
+            ) from None
         return self
 
     def has_length(self, expected_length: int) -> "ThatAssertion":
@@ -307,7 +307,7 @@ class ThatAssertion:
                 f"{self.expression}.has_length({expected_length})",
                 expected=f"length {expected_length}",
                 actual=f"{type(self.value).__name__} (no length)",
-            )
+            ) from None
         return self
 
     def matches(self, pattern: Union[str, Pattern]) -> "ThatAssertion":
@@ -388,7 +388,7 @@ class ThatAssertion:
                 f"{self.expression}.raises({exception_type.__name__})",
                 expected=f"{exception_type.__name__}",
                 actual=f"{type(e).__name__}({repr(str(e))})",
-            )
+            ) from None
         return self
 
     def does_not_raise(self) -> "ThatAssertion":
@@ -409,7 +409,7 @@ class ThatAssertion:
                 f"{self.expression}.does_not_raise()",
                 expected="no exception",
                 actual=f"{type(e).__name__}({repr(str(e))})",
-            )
+            ) from None
 
     def is_greater_than(self, value: Union[int, float]) -> "ThatAssertion":
         """Assert that the number is greater than the given value."""
@@ -520,7 +520,7 @@ class ThatAssertion:
                 f"{self.expression}.all_satisfy(<predicate>)",
                 expected="iterable collection",
                 actual=f"{type(self.value).__name__} (not iterable)",
-            )
+            ) from None
 
         failing_items = []
         for i, item in enumerate(items):
@@ -554,7 +554,7 @@ class ThatAssertion:
                 f"{self.expression}.are_unique()",
                 expected="iterable collection",
                 actual=f"{type(self.value).__name__} (not iterable)",
-            )
+            ) from None
 
         seen = set()
         duplicates = []
@@ -606,7 +606,7 @@ def _validate_iterable_for_sorting(value: Any, expression: str, key_func) -> lis
             f"{expression}.are_sorted_by({repr(key_func)})",
             expected="iterable collection",
             actual=f"{type(value).__name__} (not iterable)",
-        )
+        ) from None
 
 
 def _create_key_function(key_func: Union[str, Callable]):
@@ -631,7 +631,7 @@ def _sort_items_safely(items: list, get_key: Callable, reverse: bool, expression
             f"{expression}.are_sorted_by({repr(key_func)})",
             expected="sortable items",
             actual=f"Error sorting: {e}",
-        )
+        ) from None
 
 
 def _raise_sorting_error(items: list, sorted_items: list, reverse: bool, expression: str, key_func):

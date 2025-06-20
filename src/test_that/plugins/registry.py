@@ -116,7 +116,7 @@ class PluginRegistry:
                 plugin.initialize(plugin_config)
                 self._plugin_load_times[plugin.info.name] = time.perf_counter() - start_time
             except Exception as e:
-                raise PluginError(f"Plugin '{plugin.info.name}' initialization failed: {e}")
+                raise PluginError(f"Plugin '{plugin.info.name}' initialization failed: {e}") from e
 
             # Register by type with priority sorting
             self._plugins[plugin.info.name] = plugin
@@ -357,7 +357,7 @@ class PluginRegistry:
         try:
             version.parse(info.version)
         except version.InvalidVersion:
-            raise ValueError(f"Invalid plugin version: {info.version}")
+            raise ValueError(f"Invalid plugin version: {info.version}") from None
 
     def _check_version_compatibility(self, info: PluginInfo) -> None:
         """Check if plugin version is compatible with That."""

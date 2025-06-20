@@ -35,11 +35,11 @@ class PluginBase(ABC):
 
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
-        pass
+        return
 
     def cleanup(self) -> None:
         """Cleanup plugin resources."""
-        pass
+        return
 
     def validate_dependencies(self) -> List[str]:
         """Validate plugin dependencies and return missing ones."""

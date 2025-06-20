@@ -21,7 +21,7 @@ class TimeFreeze:
     def __init__(self, frozen_time: Union[str, datetime.datetime]):
         """
         Initialize time freezer.
-        
+
         Args:
             frozen_time: Either an ISO string like "2024-01-01T00:00:00Z"
                         or a datetime object
@@ -47,10 +47,10 @@ class TimeFreeze:
     def freeze_during(self, func: Callable) -> Callable:
         """
         Return a wrapped version of func that executes with frozen time.
-        
+
         Args:
             func: Function to execute with frozen time
-            
+
         Returns:
             Wrapped function
         """

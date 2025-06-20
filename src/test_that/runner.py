@@ -262,7 +262,7 @@ class TestRunner:
                 all_results.append(result)
 
         # Run suite tests
-        for suite_name, suite in _registry.suites.items():
+        for _suite_name, suite in _registry.suites.items():
             suite_results = self.run_suite(suite)
             all_results.extend(suite_results)
 

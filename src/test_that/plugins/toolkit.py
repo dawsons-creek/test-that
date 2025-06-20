@@ -25,7 +25,7 @@ from test_that.plugins.base import DecoratorPlugin, PluginInfo
 
 class {class_name}(DecoratorPlugin):
     """Decorator plugin: {description}"""
-    
+
     @property
     def info(self) -> PluginInfo:
         return PluginInfo(
@@ -38,17 +38,17 @@ class {class_name}(DecoratorPlugin):
             url="",
             priority=100
         )
-    
+
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
         self.config = config
-    
+
     def get_decorators(self) -> Dict[str, Callable]:
         """Return decorator functions."""
         return {{
             "{name}": self._create_{name}_decorator
         }}
-    
+
     def _create_{name}_decorator(self, *args, **kwargs):
         """Create the {name} decorator."""
         def decorator(func):
@@ -81,7 +81,7 @@ from test_that.plugins.base import AssertionPlugin, PluginInfo
 
 class {class_name}(AssertionPlugin):
     """Assertion plugin: {description}"""
-    
+
     @property
     def info(self) -> PluginInfo:
         return PluginInfo(
@@ -94,23 +94,23 @@ class {class_name}(AssertionPlugin):
             url="",
             priority=100
         )
-    
+
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
         self.config = config
-    
+
     def get_assertion_methods(self) -> Dict[str, Callable]:
         """Return assertion methods."""
         return {{
             "{name}_example": self._create_{name}_assertion
         }}
-    
+
     def _create_{name}_assertion(self, assertion_instance):
         """Create assertion method for {name}."""
         def assertion_method(*args, **kwargs):
             # Add your assertion logic here
             value = assertion_instance.value
-            
+
             # Example assertion logic
             if not self._validate_value(value, *args, **kwargs):
                 from test_that.assertions import ThatAssertionError
@@ -119,11 +119,11 @@ class {class_name}(AssertionPlugin):
                     expected="expected condition",
                     actual=value
                 )
-            
+
             return assertion_instance
-        
+
         return assertion_method
-    
+
     def _validate_value(self, value: Any, *args, **kwargs) -> bool:
         """Validate the assertion condition."""
         # Implement your validation logic here
@@ -142,7 +142,7 @@ from test_that.plugins.base import LifecyclePlugin, PluginInfo
 
 class {class_name}(LifecyclePlugin):
     """Lifecycle plugin: {description}"""
-    
+
     @property
     def info(self) -> PluginInfo:
         return PluginInfo(
@@ -155,7 +155,7 @@ class {class_name}(LifecyclePlugin):
             url="",
             priority=100
         )
-    
+
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
         self.config = config
@@ -165,13 +165,13 @@ class {class_name}(LifecyclePlugin):
             'start_time': None,
             'end_time': None
         }}
-    
+
     def before_test_run(self) -> None:
         """Called before all tests start."""
         import time
         self.stats['start_time'] = time.time()
         print(f"[{self.info.name}] Starting test run")
-    
+
     def after_test_run(self) -> None:
         """Called after all tests complete."""
         import time
@@ -179,26 +179,26 @@ class {class_name}(LifecyclePlugin):
         duration = self.stats['end_time'] - self.stats['start_time']
         print(f"[{self.info.name}] Test run completed in {{duration:.2f}}s")
         print(f"[{self.info.name}] Ran {{self.stats['tests_run']}} tests in {{self.stats['suites_run']}} suites")
-    
+
     def before_test(self, test_name: str) -> None:
         """Called before each individual test."""
         print(f"[{self.info.name}] Starting test: {{test_name}}")
-    
+
     def after_test(self, test_name: str, result: Any) -> None:
         """Called after each individual test."""
         self.stats['tests_run'] += 1
         status = "PASSED" if result.passed else "FAILED"
         print(f"[{self.info.name}] Test {{test_name}}: {{status}}")
-    
+
     def before_suite(self, suite_name: str) -> None:
         """Called before each test suite."""
         print(f"[{self.info.name}] Starting suite: {{suite_name}}")
-    
+
     def after_suite(self, suite_name: str) -> None:
         """Called after each test suite."""
         self.stats['suites_run'] += 1
         print(f"[{self.info.name}] Suite {{suite_name}} completed")
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get plugin statistics."""
         return self.stats.copy()
@@ -259,28 +259,28 @@ from {name}_plugin import {class_name}
 
 
 with suite("{class_name} Tests"):
-    
+
     @test("plugin info is valid")
     def test_plugin_info():
         plugin = {class_name}()
         info = plugin.info
-        
+
         that(info.name).equals("{name}")
         that(info.version).is_not_none()
         that(info.description).is_not_none()
-    
+
     @test("plugin initializes without error")
     def test_plugin_initialization():
         plugin = {class_name}()
-        
+
         # Should not raise an exception
         that(lambda: plugin.initialize({{}})).does_not_raise()
-    
+
     @test("plugin cleanup works")
     def test_plugin_cleanup():
         plugin = {class_name}()
         plugin.initialize({{}})
-        
+
         # Should not raise an exception
         that(lambda: plugin.cleanup()).does_not_raise()
 '''
@@ -291,7 +291,7 @@ with suite("{class_name} Tests"):
     def test_decorator_available():
         plugin = {class_name}()
         decorators = plugin.get_decorators()
-        
+
         that(decorators).has_key("{name}")
         that(decorators["{name}"]).is_not_none()
 '''
@@ -302,7 +302,7 @@ with suite("{class_name} Tests"):
     def test_assertion_methods():
         plugin = {class_name}()
         methods = plugin.get_assertion_methods()
-        
+
         that(len(methods)).is_greater_than(0)
 '''
 
@@ -312,7 +312,7 @@ with suite("{class_name} Tests"):
     def test_lifecycle_hooks():
         plugin = {class_name}()
         plugin.initialize({{}})
-        
+
         # Test lifecycle methods don't raise exceptions
         that(lambda: plugin.before_test_run()).does_not_raise()
         that(lambda: plugin.before_test("test")).does_not_raise()

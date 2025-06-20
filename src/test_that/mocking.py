@@ -4,7 +4,6 @@ Simple mocking functionality for the That testing library.
 Encourages dependency injection and good testing practices.
 """
 
-import functools
 from typing import Any, Callable, List, Optional, Union
 
 
@@ -31,7 +30,7 @@ class Mock:
     """A mock object that tracks calls and provides verification."""
 
     def __init__(self, name: str, return_value: Any = None,
-                 side_effect: Union[List[Any], Exception, Callable] = None,
+                 side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
                  raises: Optional[Exception] = None):
         self.name = name
         self.return_value = return_value
@@ -54,7 +53,7 @@ class Mock:
             try:
                 return next(self._side_effect_iter)
             except StopIteration:
-                raise ValueError(f"Mock '{self.name}' exhausted side_effect values")
+                raise ValueError(f"Mock '{self.name}' exhausted side_effect values") from None
 
         if callable(self.side_effect):
             return self.side_effect(*args, **kwargs)
@@ -128,7 +127,7 @@ class Mock:
         except IndexError:
             raise IndexError(
                 f"Mock '{self.name}' call index {index} out of range (0-{len(self.calls)-1})"
-            )
+            ) from None
 
 
 class MockContext:
@@ -160,34 +159,34 @@ _mock_context = MockContext()
 
 def mock(obj: Any, attr_name: str, *,
          return_value: Any = None,
-         side_effect: Union[List[Any], Exception, Callable] = None,
+         side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
          raises: Optional[Exception] = None) -> Mock:
     """
     Replace an attribute with a mock object.
-    
+
     Args:
         obj: The object to mock an attribute on
         attr_name: Name of the attribute to replace
         return_value: Value to return when mock is called
         side_effect: List of values to return in sequence, callable, or exception
         raises: Exception to raise when mock is called
-    
+
     Returns:
         Mock object for verification (supports method chaining)
-    
+
     Example:
         # Common pattern: Mock an injected dependency
         from test_that import test, that, mock
-        
+
         @test("user service fetches data correctly")
         def test_user_service():
             service = UserService(api_client)
-            
+
             # Mock the dependency and chain verifications
             api_mock = mock(api_client, 'get_user', return_value={'id': 1, 'name': 'John'})
-            
+
             result = service.get_user_profile(1)
-            
+
             # Fluent verification
             api_mock.assert_called_once().assert_called_with('/users/1')
             that(result['name']).equals('John')
@@ -220,17 +219,17 @@ def cleanup_mocks():
 def mock_that(mock_obj: Mock):
     """
     Create assertion wrapper for a mock object that integrates with that() API.
-    
+
     Args:
         mock_obj: The mock object to create assertions for
-    
+
     Returns:
         Object with assertion methods that integrate with that()
-    
+
     Example:
         api_mock = mock(client, 'get', return_value={'data': 'test'})
         client.get('/users')
-        
+
         # Can use with that() for more complex assertions
         from test_that import that
         that(mock_that(api_mock).call_count).equals(1)
@@ -263,14 +262,3 @@ def mock_that(mock_obj: Mock):
     return MockAssertions(mock_obj)
 
 
-# Integration with test runner
-def _wrap_test_for_mocking(test_func: Callable) -> Callable:
-    """Wrap a test function to ensure mock cleanup."""
-    @functools.wraps(test_func)
-    def wrapped(*args, **kwargs):
-        try:
-            return test_func(*args, **kwargs)
-        finally:
-            cleanup_mocks()
-
-    return wrapped

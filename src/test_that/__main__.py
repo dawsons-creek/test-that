@@ -78,7 +78,7 @@ def _parse_line_range(line_spec: str) -> Set[int]:
         end_line = int(end)
         return set(range(start_line, end_line + 1))
     except ValueError:
-        raise ValueError(f"Invalid line range: {line_spec}")
+        raise ValueError(f"Invalid line range: {line_spec}") from None
 
 
 def _parse_multiple_lines(line_spec: str) -> Set[int]:
@@ -88,7 +88,7 @@ def _parse_multiple_lines(line_spec: str) -> Set[int]:
         try:
             line_numbers.add(int(line.strip()))
         except ValueError:
-            raise ValueError(f"Invalid line number: {line}")
+            raise ValueError(f"Invalid line number: {line}") from None
     return line_numbers
 
 
@@ -97,7 +97,7 @@ def _parse_single_line(line_spec: str) -> Set[int]:
     try:
         return {int(line_spec)}
     except ValueError:
-        raise ValueError(f"Invalid line number: {line_spec}")
+        raise ValueError(f"Invalid line number: {line_spec}") from None
 
 
 def load_test_file(file_path: Path) -> bool:
@@ -270,7 +270,7 @@ def parse_file_arguments(args) -> Tuple[Optional[str], dict]:
                     line_filters[abs_path] = line_numbers
             except ValueError as e:
                 print(f"Error: {e}")
-                raise SystemExit(1)
+                raise SystemExit(1) from None
 
     args.files = parsed_files
     return specific_test, line_filters
@@ -455,10 +455,10 @@ def parse_tag_filters(args) -> Tuple[Optional[set], Optional[set]]:
     exclude_tags = None
 
     if args.include_tags:
-        include_tags = set(tag.strip() for tag in args.include_tags.split(','))
+        include_tags = {tag.strip() for tag in args.include_tags.split(',')}
 
     if args.exclude_tags:
-        exclude_tags = set(tag.strip() for tag in args.exclude_tags.split(','))
+        exclude_tags = {tag.strip() for tag in args.exclude_tags.split(',')}
 
     if args.skip_slow:
         if exclude_tags is None:

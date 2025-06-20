@@ -150,7 +150,7 @@ class TimeContextOrDecorator:
             self.replay._context_time = self.old_time
         except Exception as e:
             # Don't raise in __exit__ unless it's critical
-            warnings.warn(f"Error exiting time context: {e}", RuntimeWarning)
+            warnings.warn(f"Error exiting time context: {e}", RuntimeWarning, stacklevel=2)
 
 
 class Replay:
@@ -174,19 +174,19 @@ class Replay:
     def time(self, frozen_time: Union[str, Any]):
         """
         Freeze time during test execution.
-        
+
         Can be used as decorator or context manager.
-        
+
         Args:
             frozen_time: ISO string like "2024-01-01T00:00:00Z" or datetime object
-            
+
         Example:
             @test("user created at midnight")
             @replay.time("2024-01-01T00:00:00Z")
             def test_user_creation():
                 user = create_user()
                 that(user.created_at).equals(datetime(2024, 1, 1, 0, 0, 0))
-                
+
             # Or as context manager:
             with replay.time("2024-01-01T00:00:00Z"):
                 # tests here run at frozen time
@@ -198,11 +198,11 @@ class Replay:
     def http(self, cassette_name: str, mode: str = "once"):
         """
         Record/replay HTTP requests during test execution.
-        
+
         Args:
             cassette_name: Name of the recording file (without .yaml extension)
             mode: "once" (default), "record", or "replay_only"
-            
+
         Example:
             @test("fetches user from API")
             @replay.http("user_fetch")
@@ -216,12 +216,12 @@ class Replay:
                  http: Optional[str] = None, mode: str = "once"):
         """
         Combined time and HTTP control.
-        
+
         Args:
             time: Time to freeze (ISO string or datetime)
             http: HTTP cassette name
             mode: Recording mode for HTTP
-            
+
         Example:
             @test("complete user signup flow")
             @replay(time="2024-01-01T12:00:00Z", http="user_signup")
