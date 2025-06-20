@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from that import test, suite, that, tag, integration, mock, replay
+from that import test, suite, that, mock, replay
 from todo_cli.src.commands import TodoCommands
 from todo_cli.src.storage import FileStorage, MemoryStorage
 from todo_cli.src.models import Todo, Priority, Status
@@ -12,7 +12,6 @@ from todo_cli.src.models import Todo, Priority, Status
 with suite("Add Command"):
     
     @test("adds basic todo")
-    @tag("integration", "commands")
     def test_add_basic():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -28,7 +27,6 @@ with suite("Add Command"):
         that(stored.title).equals("Buy milk")
     
     @test("adds todo with all options")
-    @tag("integration", "commands")
     def test_add_with_options():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -47,7 +45,6 @@ with suite("Add Command"):
         that(todo.tags).contains("urgent")
     
     @test("validates priority values")
-    @tag("integration", "commands", "validation")
     def test_add_invalid_priority():
         commands = TodoCommands(MemoryStorage())
         
@@ -57,7 +54,6 @@ with suite("Add Command"):
 with suite("List Command"):
     
     @test("lists all todos")
-    @tag("integration", "commands")
     def test_list_all():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -75,7 +71,6 @@ with suite("List Command"):
         that([t.title for t in todos]).contains("Task 3")
     
     @test("filters by status")
-    @tag("integration", "commands", "filtering")
     def test_list_by_status():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -97,7 +92,6 @@ with suite("List Command"):
         that(completed[0].title).equals("Completed")
     
     @test("filters by tag")
-    @tag("integration", "commands", "filtering")
     def test_list_by_tag():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -113,7 +107,6 @@ with suite("List Command"):
         that(urgent_todos).has_length(1)
     
     @test("searches todos")
-    @tag("integration", "commands", "search")
     def test_list_search():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -140,7 +133,6 @@ with suite("List Command"):
 with suite("Complete and Reopen Commands"):
     
     @test("completes a todo")
-    @tag("integration", "commands")
     @replay.time("2024-01-20T14:30:00Z")
     def test_complete_todo():
         storage = MemoryStorage()
@@ -159,7 +151,6 @@ with suite("Complete and Reopen Commands"):
         that(stored.status).equals(Status.COMPLETED)
     
     @test("reopens a todo")
-    @tag("integration", "commands")
     def test_reopen_todo():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -173,7 +164,6 @@ with suite("Complete and Reopen Commands"):
         that(reopened.completed_at).is_none()
     
     @test("handles non-existent todo")
-    @tag("integration", "commands", "error-handling")
     def test_complete_nonexistent():
         commands = TodoCommands(MemoryStorage())
         
@@ -183,7 +173,6 @@ with suite("Complete and Reopen Commands"):
 with suite("Update Command"):
     
     @test("updates todo properties")
-    @tag("integration", "commands")
     def test_update_todo():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -202,7 +191,6 @@ with suite("Update Command"):
         that(updated.priority).equals(Priority.HIGH)
     
     @test("adds and removes tags")
-    @tag("integration", "commands")
     def test_update_tags():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -221,7 +209,6 @@ with suite("Update Command"):
         that(updated.tags).does_not_contain("remove")
     
     @test("partial updates")
-    @tag("integration", "commands")
     def test_partial_update():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -243,7 +230,6 @@ with suite("Update Command"):
 with suite("Delete and Clear Commands"):
     
     @test("deletes a todo")
-    @tag("integration", "commands")
     def test_delete_todo():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -260,7 +246,6 @@ with suite("Delete and Clear Commands"):
         that(lambda: storage.get(todo2.id)).raises(Exception)
     
     @test("clears completed todos")
-    @tag("integration", "commands")
     def test_clear_completed():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -288,7 +273,6 @@ with suite("Delete and Clear Commands"):
 with suite("Statistics"):
     
     @test("calculates todo statistics")
-    @tag("integration", "commands")
     def test_get_stats():
         storage = MemoryStorage()
         commands = TodoCommands(storage)
@@ -323,7 +307,6 @@ with suite("Statistics"):
 with suite("File Storage Integration"):
     
     @test("persists todos to file")
-    @tag("integration", "file-storage")
     def test_file_persistence():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # First session - add todos
@@ -355,7 +338,6 @@ with suite("File Storage Integration"):
             Path(tmp.name).unlink()
     
     @test("handles concurrent modifications safely")
-    @tag("integration", "file-storage", "concurrency")
     def test_concurrent_modifications():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Two command instances with same file

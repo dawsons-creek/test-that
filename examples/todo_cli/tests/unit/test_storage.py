@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from that import test, suite, that, tag, unit, mock, provide
+from that import test, suite, that, mock, provide
 from todo_cli.src.models import Todo, Priority, Status
 from todo_cli.src.storage import (
     MemoryStorage, FileStorage, StorageError, 
@@ -39,7 +39,6 @@ def completed_todo():
 with suite("MemoryStorage Tests"):
     
     @test("stores and retrieves todo")
-    @tag("unit", "storage")
     def test_memory_save_and_get():
         storage = MemoryStorage()
         
@@ -51,7 +50,6 @@ with suite("MemoryStorage Tests"):
         that(retrieved.priority).equals(Priority.HIGH)
     
     @test("prevents duplicate IDs")
-    @tag("unit", "storage", "validation")
     def test_memory_duplicate_id():
         storage = MemoryStorage()
         
@@ -61,14 +59,12 @@ with suite("MemoryStorage Tests"):
         that(lambda: storage.save(duplicate)).raises(StorageError)
     
     @test("raises error for non-existent todo")
-    @tag("unit", "storage", "error-handling")
     def test_memory_get_nonexistent():
         storage = MemoryStorage()
         
         that(lambda: storage.get("nonexistent")).raises(TodoNotFoundError)
     
     @test("lists all todos")
-    @tag("unit", "storage")
     def test_memory_get_all():
         storage = MemoryStorage()
         
@@ -87,7 +83,6 @@ with suite("MemoryStorage Tests"):
         that([t.title for t in todos]).contains("Third")
     
     @test("updates existing todo")
-    @tag("unit", "storage")
     def test_memory_update():
         storage = MemoryStorage()
         
@@ -103,7 +98,6 @@ with suite("MemoryStorage Tests"):
         that(retrieved.status).equals(Status.COMPLETED)
     
     @test("deletes todo")
-    @tag("unit", "storage")
     def test_memory_delete():
         storage = MemoryStorage()
         
@@ -115,7 +109,6 @@ with suite("MemoryStorage Tests"):
         that(lambda: storage.get("test-123")).raises(TodoNotFoundError)
     
     @test("clears all todos")
-    @tag("unit", "storage")
     def test_memory_clear():
         storage = MemoryStorage()
         
@@ -132,7 +125,6 @@ with suite("MemoryStorage Tests"):
 with suite("FileStorage Tests"):
     
     @test("creates storage file if not exists")
-    @tag("unit", "storage", "file-io")
     def test_file_storage_init():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             tmp_path = tmp.name
@@ -148,7 +140,6 @@ with suite("FileStorage Tests"):
         Path(tmp_path).unlink()
     
     @test("saves todo to file")
-    @tag("unit", "storage", "file-io")
     def test_file_save():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             storage = FileStorage(tmp.name)
@@ -165,7 +156,6 @@ with suite("FileStorage Tests"):
             Path(tmp.name).unlink()
     
     @test("loads todos from file")
-    @tag("unit", "storage", "file-io")
     def test_file_load():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='w') as tmp:
             # Write test data
@@ -193,7 +183,6 @@ with suite("FileStorage Tests"):
             Path(tmp.name).unlink()
     
     @test("handles corrupted file")
-    @tag("unit", "storage", "error-handling")
     def test_file_corrupted():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='w') as tmp:
             tmp.write("{ invalid json ]")
@@ -206,7 +195,6 @@ with suite("FileStorage Tests"):
             Path(tmp.name).unlink()
     
     @test("persists changes across instances")
-    @tag("unit", "storage", "file-io")
     def test_file_persistence():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # First instance saves data
@@ -237,7 +225,6 @@ with suite("StorageBackend Common Features"):
             ]
     
     @test("finds todos by status")
-    @tag("unit", "storage", "filtering")
     def test_find_by_status():
         for backend_info in storage_backends:
             name = backend_info[0]
@@ -265,7 +252,6 @@ with suite("StorageBackend Common Features"):
                 Path(backend_info[2]).unlink()
     
     @test("finds todos by tag")
-    @tag("unit", "storage", "filtering")
     def test_find_by_tag():
         for backend_info in storage_backends:
             name = backend_info[0]
@@ -293,7 +279,6 @@ with suite("StorageBackend Common Features"):
                 Path(backend_info[2]).unlink()
     
     @test("searches todos by query")
-    @tag("unit", "storage", "search")
     def test_search():
         for backend_info in storage_backends:
             name = backend_info[0]

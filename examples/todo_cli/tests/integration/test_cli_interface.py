@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from that import test, suite, that, tag, integration, mock
+from that import test, suite, that, mock
 
 
 def run_cli(args, storage_file=None):
@@ -29,7 +29,6 @@ def run_cli(args, storage_file=None):
 with suite("CLI Add Command"):
     
     @test("adds todo via CLI")
-    @tag("integration", "cli")
     def test_cli_add():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             result = run_cli(["add", "Buy groceries"], tmp.name)
@@ -45,7 +44,6 @@ with suite("CLI Add Command"):
             Path(tmp.name).unlink()
     
     @test("adds todo with options")
-    @tag("integration", "cli")
     def test_cli_add_with_options():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             result = run_cli([
@@ -71,7 +69,6 @@ with suite("CLI Add Command"):
 with suite("CLI List Command"):
     
     @test("lists todos with filters")
-    @tag("integration", "cli")
     def test_cli_list_filters():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Add some todos
@@ -95,7 +92,6 @@ with suite("CLI List Command"):
             Path(tmp.name).unlink()
     
     @test("searches todos")
-    @tag("integration", "cli")
     def test_cli_search():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             run_cli(["add", "Fix login bug", "-d", "Users cannot login"], tmp.name)
@@ -114,7 +110,6 @@ with suite("CLI List Command"):
 with suite("CLI Complete Command"):
     
     @test("completes todo by ID prefix")
-    @tag("integration", "cli")
     def test_cli_complete():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Add a todo
@@ -141,7 +136,6 @@ with suite("CLI Complete Command"):
 with suite("CLI Update Command"):
     
     @test("updates todo properties")
-    @tag("integration", "cli")
     def test_cli_update():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Add a todo
@@ -169,7 +163,6 @@ with suite("CLI Update Command"):
 with suite("CLI Error Handling"):
     
     @test("handles invalid commands")
-    @tag("integration", "cli", "error-handling")
     def test_cli_invalid_command():
         result = run_cli(["invalid"])
         
@@ -177,7 +170,6 @@ with suite("CLI Error Handling"):
         that(result.stderr).contains("Error:")
     
     @test("handles missing arguments")
-    @tag("integration", "cli", "error-handling")
     def test_cli_missing_args():
         result = run_cli(["add"])  # Missing title
         
@@ -185,7 +177,6 @@ with suite("CLI Error Handling"):
         that(result.stderr).contains("error")
     
     @test("handles non-existent todo")
-    @tag("integration", "cli", "error-handling")
     def test_cli_nonexistent_todo():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             result = run_cli(["complete", "fake-id"], tmp.name)
@@ -197,7 +188,6 @@ with suite("CLI Error Handling"):
             Path(tmp.name).unlink()
     
     @test("handles ambiguous ID prefix")
-    @tag("integration", "cli", "error-handling")  
     def test_cli_ambiguous_prefix():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Add two todos with similar IDs (mock this scenario)
@@ -218,7 +208,6 @@ with suite("CLI Error Handling"):
 with suite("CLI Statistics"):
     
     @test("shows statistics")
-    @tag("integration", "cli")
     def test_cli_stats():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             # Create diverse todos
@@ -252,7 +241,6 @@ with suite("CLI Statistics"):
 with suite("CLI Help"):
     
     @test("shows help with no args")
-    @tag("integration", "cli")
     def test_cli_help_no_args():
         result = run_cli([])
         
@@ -261,7 +249,6 @@ with suite("CLI Help"):
         that(result.stdout).contains("Available commands")
     
     @test("shows help for subcommands")
-    @tag("integration", "cli")
     def test_cli_help_subcommand():
         result = run_cli(["add", "--help"])
         

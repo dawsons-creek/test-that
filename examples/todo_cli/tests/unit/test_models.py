@@ -2,14 +2,13 @@
 
 from datetime import datetime
 
-from that import test, suite, that, tag, unit, replay
+from that import test, suite, that, replay
 from todo_cli.src.models import Todo, Priority, Status
 
 
 with suite("Todo Model Creation"):
     
     @test("creates todo with required fields")
-    @tag("unit")
     def test_create_minimal_todo():
         todo = Todo(title="Buy groceries")
         
@@ -23,7 +22,6 @@ with suite("Todo Model Creation"):
         that(todo.completed_at).is_none()
     
     @test("creates todo with all fields")
-    @tag("unit")
     def test_create_full_todo():
         todo = Todo(
             title="Complete project",
@@ -39,19 +37,16 @@ with suite("Todo Model Creation"):
         that(todo.tags).has_length(3)
     
     @test("validates empty title")
-    @tag("unit", "validation")
     def test_empty_title_validation():
         that(lambda: Todo(title="")).raises(ValueError)
         that(lambda: Todo(title="   ")).raises(ValueError)
     
     @test("validates title length")
-    @tag("unit", "validation")
     def test_title_length_validation():
         long_title = "x" * 201
         that(lambda: Todo(title=long_title)).raises(ValueError)
     
     @test("normalizes tags to lowercase and unique")
-    @tag("unit")
     def test_tag_normalization():
         todo = Todo(
             title="Test todo",
@@ -68,7 +63,6 @@ with suite("Todo Model Creation"):
 with suite("Todo Status Management"):
     
     @test("completes a pending todo")
-    @tag("unit")
     def test_complete_todo():
         todo = Todo(title="Write tests")
         that(todo.status).equals(Status.PENDING)
@@ -80,14 +74,12 @@ with suite("Todo Status Management"):
         that(todo.completed_at).is_not_none()
     
     @test("cannot complete already completed todo")
-    @tag("unit", "validation")
     def test_complete_already_completed():
         todo = Todo(title="Done task", status=Status.COMPLETED)
         
         that(lambda: todo.complete()).raises(ValueError)
     
     @test("reopens a completed todo")
-    @tag("unit")
     def test_reopen_todo():
         todo = Todo(title="Finished task", status=Status.COMPLETED)
         todo.completed_at = datetime.now()
@@ -98,7 +90,6 @@ with suite("Todo Status Management"):
         that(todo.completed_at).is_none()
     
     @test("cannot reopen pending todo")
-    @tag("unit", "validation")
     def test_reopen_already_pending():
         todo = Todo(title="Pending task")
         
@@ -108,7 +99,6 @@ with suite("Todo Status Management"):
 with suite("Todo Tag Management"):
     
     @test("adds tags to todo")
-    @tag("unit")
     def test_add_tags():
         todo = Todo(title="Learn Python")
         
@@ -120,7 +110,6 @@ with suite("Todo Tag Management"):
         that(todo.tags).has_length(2)
     
     @test("prevents duplicate tags")
-    @tag("unit")
     def test_no_duplicate_tags():
         todo = Todo(title="Study", tags=["learning"])
         
@@ -130,7 +119,6 @@ with suite("Todo Tag Management"):
         that(todo.tags).has_length(1)
     
     @test("validates empty tag")
-    @tag("unit", "validation")
     def test_empty_tag_validation():
         todo = Todo(title="Test")
         
@@ -138,7 +126,6 @@ with suite("Todo Tag Management"):
         that(lambda: todo.add_tag("   ")).raises(ValueError)
     
     @test("removes tags from todo")
-    @tag("unit")
     def test_remove_tags():
         todo = Todo(title="Project", tags=["work", "urgent", "client"])
         
@@ -151,7 +138,6 @@ with suite("Todo Tag Management"):
         that(todo.tags).has_length(2)
     
     @test("checks if todo has tag")
-    @tag("unit")
     def test_has_tag():
         todo = Todo(title="Task", tags=["python", "testing"])
         
@@ -163,7 +149,6 @@ with suite("Todo Tag Management"):
 with suite("Todo Search and Serialization"):
     
     @test("matches search in title")
-    @tag("unit", "search")
     def test_search_title():
         todo = Todo(title="Fix bug in authentication module")
         
@@ -172,7 +157,6 @@ with suite("Todo Search and Serialization"):
         that(todo.matches_search("login")).is_false()
     
     @test("matches search in description")
-    @tag("unit", "search")
     def test_search_description():
         todo = Todo(
             title="Update docs",
@@ -184,7 +168,6 @@ with suite("Todo Search and Serialization"):
         that(todo.matches_search("bug")).is_false()
     
     @test("matches search in tags")
-    @tag("unit", "search")
     def test_search_tags():
         todo = Todo(title="Task", tags=["backend", "database"])
         
@@ -193,7 +176,6 @@ with suite("Todo Search and Serialization"):
         that(todo.matches_search("frontend")).is_false()
     
     @test("serializes todo to dict")
-    @tag("unit", "serialization")
     def test_todo_to_dict():
         todo = Todo(
             id="test-123",
@@ -219,7 +201,6 @@ with suite("Todo Search and Serialization"):
         that(data['completed_at']).is_none()
     
     @test("deserializes todo from dict")
-    @tag("unit", "serialization")
     def test_todo_from_dict():
         data = {
             'id': 'test-456',

@@ -11,7 +11,7 @@ A full-featured command-line todo application with comprehensive test coverage.
 **Demonstrates:**
 - Unit testing with That's fluent assertion API
 - Integration testing of CLI commands
-- Test organization with suites and tags
+- Test organization with suites and directories
 - Fixtures using `@provide` decorator
 - Mocking for file I/O operations
 - Time control with `@replay.time()`
@@ -32,7 +32,7 @@ Each example includes its own test suite. To run tests:
 uv run that examples/todo_cli/tests
 
 # Run only unit tests
-uv run that examples/todo_cli/tests --include-tags unit
+uv run that examples/todo_cli/tests/unit
 
 # Run specific test file
 uv run that examples/todo_cli/tests/unit/test_models.py
@@ -48,7 +48,7 @@ When adding new examples:
    - How to run it
    - Key patterns and techniques used
 3. Organize tests into `unit/` and `integration/` subdirectories
-4. Use appropriate tags for test categorization
+4. Organize tests by directory structure (unit/, integration/, etc.)
 5. Include both positive and negative test cases
 
 Examples should showcase That's features while remaining realistic and educational.

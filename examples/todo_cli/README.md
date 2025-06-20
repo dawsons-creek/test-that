@@ -7,7 +7,7 @@ A comprehensive example demonstrating the That testing framework through a full-
 This example showcases:
 - **Unit testing** with That's assertion API
 - **Integration testing** of CLI commands
-- **Test organization** with suites and tags
+- **Test organization** with suites and directories
 - **Fixtures** using the `@provide` decorator
 - **Mocking** for file I/O operations
 - **Time control** with `replay.time()`
@@ -43,10 +43,10 @@ From the project root:
 uv run that examples/todo_cli/tests
 
 # Run only unit tests
-uv run that examples/todo_cli/tests -t unit
+uv run that examples/todo_cli/tests/unit
 
 # Run only integration tests
-uv run that examples/todo_cli/tests -t integration
+uv run that examples/todo_cli/tests/integration
 
 # Run tests for a specific module
 uv run that examples/todo_cli/tests/unit/test_models.py
@@ -61,10 +61,8 @@ uv run that examples/todo_cli/tests -v
 
 ```python
 @test("validates empty title")
-@tag("unit", "validation")
 def test_empty_title_validation():
-    that(lambda: Todo(title="")).raises(ValueError)\
-        .with_message("Todo title cannot be empty")
+    that(lambda: Todo(title="")).raises(ValueError)
 ```
 
 ### 2. Storage Testing with Multiple Backends
@@ -123,15 +121,11 @@ def test_cli_add():
 
 ## Test Organization
 
-### Tags Used
+### Directory Structure
 
-- `unit` - Fast, isolated unit tests
-- `integration` - Tests involving multiple components
-- `validation` - Input validation tests
-- `error-handling` - Error condition tests
-- `file-io` - Tests involving file operations
-- `search` - Search functionality tests
-- `cli` - Command-line interface tests
+Tests are organized by type and purpose:
+- `unit/` - Fast, isolated unit tests
+- `integration/` - Tests involving multiple components
 
 ### Test Suites
 
@@ -166,7 +160,8 @@ python -m todo_cli.src.cli stats
 1. **Test Isolation**: Each test gets fresh fixtures via `@provide`
 2. **Comprehensive Coverage**: Tests cover happy paths, edge cases, and errors
 3. **Realistic Scenarios**: Tests mirror actual usage patterns
-4. **Clean Test Code**: That's API makes tests readable and maintainable
+4. **Clean Test Code**: That's API makes tests readable and maintainable  
 5. **Performance**: Unit tests run in microseconds, integration tests in milliseconds
+6. **Simple Organization**: Directory structure eliminates need for metadata
 
 This example demonstrates how That can scale from simple unit tests to complex integration testing scenarios while maintaining clarity and performance.
