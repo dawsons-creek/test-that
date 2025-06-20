@@ -80,3 +80,12 @@ recordings_dir = "tests/recordings"
 default_http_mode = "once"
 time_format = "iso"
 http_timeout = 30
+
+# Example plugins (disabled by default)
+[tool.that.plugins.example_assertions]
+# No specific configuration needed
+
+[tool.that.plugins.example_lifecycle]
+enabled = false
+verbose = false
+slow_threshold = 0.1

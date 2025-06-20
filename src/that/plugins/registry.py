@@ -42,6 +42,8 @@ class PluginRegistry:
         """Load built-in plugins (replay functionality)."""
         builtin_plugins = [
             'that.plugins.replay:ReplayPlugin',
+            'that.plugins.example_assertion_plugin:ExampleAssertionPlugin',
+            'that.plugins.example_lifecycle_plugin:ExampleLifecyclePlugin',
         ]
 
         for plugin_spec in builtin_plugins:

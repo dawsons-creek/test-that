@@ -9,6 +9,7 @@ That provides:
 - Clear error messages showing exactly what failed
 - JSON and dictionary testing with nested path support
 - Built-in mocking, time control, and HTTP recording
+- Extensible plugin system for custom functionality
 - Zero configuration - works out of the box
 
 ## Quick Start
@@ -182,10 +183,31 @@ def test_signup():
     # Both time and HTTP are controlled
     response = signup_user("alice@example.com")
     user = User.from_response(response)
-    
+
     that(user.created_at.year).equals(2024)
     that(response.status_code).equals(201)
 ```
+
+## Plugin System
+
+Extend That with custom functionality through plugins:
+
+```python
+# Custom assertion methods (from plugins)
+that("user@example.com").is_email()
+that("https://example.com").is_url()
+that(42).is_even()
+that(7).is_positive()
+that("hello").has_length_between(3, 10)
+```
+
+Create your own plugins for:
+- Custom test decorators
+- Domain-specific assertions
+- Test lifecycle hooks
+- Integration with external tools
+
+See the [Plugin Documentation](plugins.md) for complete details.
 
 ## All Assertions
 

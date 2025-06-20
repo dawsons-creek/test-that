@@ -182,6 +182,35 @@ class ThatAssertion:
     def __init__(self, value: Any, expression: str = ""):
         self.value = value
         self.expression = expression or f"that({repr(value)})"
+        self._load_plugin_methods()
+
+    def _load_plugin_methods(self):
+        """Load assertion methods from plugins."""
+        try:
+            from .plugins.registry import plugin_registry
+            plugin_registry.initialize()
+
+            # Get all assertion methods from plugins
+            plugin_methods = plugin_registry.get_assertion_methods()
+
+            # Dynamically add methods to this instance
+            for method_name, method_func in plugin_methods.items():
+                if not hasattr(self, method_name):
+                    # Create a proper bound method that handles the plugin function
+                    def create_bound_method(func):
+                        def bound_method(*args, **kwargs):
+                            result = func(self)
+                            # If the result is callable (like has_length_between),
+                            # call it with the provided arguments
+                            if callable(result) and args:
+                                return result(*args, **kwargs)
+                            return result
+                        return bound_method
+
+                    setattr(self, method_name, create_bound_method(method_func))
+        except ImportError:
+            # Plugin system not available, skip
+            pass
 
     def equals(self, expected: Any) -> "ThatAssertion":
         """Assert that the value equals the expected value."""
