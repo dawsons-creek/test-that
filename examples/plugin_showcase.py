@@ -40,55 +40,75 @@ with suite("Plugin System Showcase"):
         that(response.json()).has_key("name")
         that(response.json()).has_key("email")
 
-    @test("assertion plugin: email validation")
-    def test_email_validation():
-        """Demonstrate assertion plugin with email validation."""
-        # These methods come from the example assertion plugin
-        that("user@example.com").is_email()
-        that("test.email+tag@domain.co.uk").is_email()
-        that("admin@company.org").is_email()
-        
-        # Test invalid emails
-        def invalid_email():
-            that("not-an-email").is_email()
-        that(invalid_email).raises(Exception)
+    @test("assertion plugin: JSON parsing")
+    def test_json_parsing():
+        """Demonstrate assertion plugin with JSON parsing."""
+        # These methods come from the JSON schema plugin
+        json_string = '{"name": "John", "age": 30, "active": true}'
+        parsed_data = that(json_string).as_json()
 
-    @test("assertion plugin: URL validation")
-    def test_url_validation():
-        """Demonstrate assertion plugin with URL validation."""
-        that("https://example.com").is_url()
-        that("http://test.org/path?query=value").is_url()
-        that("https://api.github.com/repos/user/repo").is_url()
-        
-        # Test invalid URLs
-        def invalid_url():
-            that("not-a-url").is_url()
-        that(invalid_url).raises(Exception)
+        # Chain assertions on parsed JSON
+        that(parsed_data.value).has_key("name")
+        that(parsed_data.value["name"]).equals("John")
+        that(parsed_data.value["age"]).equals(30)
+        that(parsed_data.value["active"]).is_true()
 
-    @test("assertion plugin: number validation")
-    def test_number_validation():
-        """Demonstrate assertion plugin with number validation."""
-        # Positive numbers
-        that(5).is_positive()
-        that(3.14).is_positive()
-        that(100).is_positive()
-        
-        # Even/odd numbers
-        that(2).is_even()
-        that(0).is_even()
-        that(-4).is_even()
-        
-        that(1).is_odd()
-        that(3).is_odd()
-        that(-5).is_odd()
+    @test("assertion plugin: JSON schema validation")
+    def test_json_schema_validation():
+        """Demonstrate assertion plugin with JSON schema validation."""
+        user_data = {
+            "name": "Alice Smith",
+            "age": 28,
+            "email": "alice@example.com",
+            "preferences": {
+                "theme": "dark",
+                "notifications": True
+            }
+        }
 
-    @test("assertion plugin: length validation")
-    def test_length_validation():
-        """Demonstrate assertion plugin with length validation."""
-        that("hello").has_length_between(3, 10)
-        that([1, 2, 3]).has_length_between(2, 5)
-        that({"a": 1, "b": 2}).has_length_between(1, 3)
-        that("test").has_length_between(4, 4)  # Exact length
+        user_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "minLength": 1},
+                "age": {"type": "integer", "minimum": 0, "maximum": 150},
+                "email": {"type": "string"},
+                "preferences": {
+                    "type": "object",
+                    "properties": {
+                        "theme": {"enum": ["light", "dark"]},
+                        "notifications": {"type": "boolean"}
+                    }
+                }
+            },
+            "required": ["name", "age", "email"]
+        }
+
+        # Validate complex nested schema
+        that(user_data).matches_schema(user_schema)
+
+    @test("assertion plugin: array schema validation")
+    def test_array_schema_validation():
+        """Demonstrate assertion plugin with array schema validation."""
+        products = [
+            {"id": 1, "name": "Laptop", "price": 999.99},
+            {"id": 2, "name": "Mouse", "price": 29.99}
+        ]
+
+        products_schema = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer", "minimum": 1},
+                    "name": {"type": "string", "minLength": 1},
+                    "price": {"type": "number", "minimum": 0}
+                },
+                "required": ["id", "name", "price"]
+            },
+            "minItems": 1
+        }
+
+        that(products).matches_schema(products_schema)
 
     @test("combined plugins: time + HTTP + assertions")
     @replay(time="2024-06-15T14:30:00Z", http="combined_demo")
@@ -113,55 +133,78 @@ with suite("Plugin System Showcase"):
         that(response.status_code).equals(201)
         that(response.json()).has_key("id")
         
-        # Use plugin assertions
+        # Use JSON schema plugin for validation
         post_data = response.json()
-        that(post_data["title"]).has_length_between(5, 20)
-        
-        # Validate the timestamp format (should be ISO format)
-        timestamp = post_data.get("timestamp", "")
-        that(len(timestamp)).is_greater_than(10)  # ISO timestamps are long
+
+        # Validate the response structure
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "title": {"type": "string", "minLength": 1},
+                "body": {"type": "string"},
+                "timestamp": {"type": "string"}
+            },
+            "required": ["id", "title"]
+        }
+
+        that(post_data).matches_schema(response_schema)
 
     @test("plugin extensibility demonstration")
     def test_plugin_extensibility():
         """Show how plugins extend the framework capabilities."""
-        # Without plugins, you'd need to write custom validation logic
-        # With plugins, you get domain-specific assertions
-        
-        user_data = {
-            "email": "john.doe@company.com",
-            "website": "https://johndoe.dev",
-            "age": 28,
-            "id": 12345
+        # Without plugins, you'd need to write custom JSON parsing and validation
+        # With plugins, you get powerful JSON schema validation
+
+        api_response = '{"user": {"id": 123, "name": "John Doe", "email": "john@example.com"}, "status": "success"}'
+
+        # Parse JSON and validate complex nested structure
+        api_schema = {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer", "minimum": 1},
+                        "name": {"type": "string", "minLength": 1},
+                        "email": {"type": "string", "pattern": r"^[^@]+@[^@]+\.[^@]+$"}
+                    },
+                    "required": ["id", "name", "email"]
+                },
+                "status": {"enum": ["success", "error", "pending"]}
+            },
+            "required": ["user", "status"]
         }
-        
-        # Validate using plugin assertions
-        that(user_data["email"]).is_email()
-        that(user_data["website"]).is_url()
-        that(user_data["age"]).is_positive()
-        that(user_data["age"]).is_even()
-        
+
+        # Validate using plugin functionality
+        that(api_response).as_json().matches_schema(api_schema)
+
         # Combine with built-in assertions
-        that(user_data).has_key("id")
-        that(user_data["id"]).is_greater_than(0)
+        parsed = that(api_response).as_json()
+        that(parsed.value["user"]["id"]).is_greater_than(0)
+        that(parsed.value["status"]).equals("success")
 
     @test("performance with plugins")
     def test_plugin_performance():
         """Demonstrate that plugins don't significantly impact performance."""
         import time
-        
+
         start_time = time.perf_counter()
-        
-        # Perform multiple assertions using plugin methods
-        for i in range(100):
-            that(f"user{i}@example.com").is_email()
-            that(i).is_even() if i % 2 == 0 else that(i).is_odd()
-            that(f"test{i}").has_length_between(5, 10)
-        
+
+        # Perform multiple JSON operations using plugin methods
+        for i in range(50):  # Reduced iterations since JSON parsing is more expensive
+            json_data = f'{{"id": {i}, "name": "user{i}", "active": true}}'
+            that(json_data).as_json().has_key("id")
+
+            # Schema validation
+            simple_schema = {"type": "object", "properties": {"id": {"type": "integer"}}}
+            that(json_data).as_json().matches_schema(simple_schema)
+
         end_time = time.perf_counter()
         duration = end_time - start_time
-        
-        # Should complete quickly even with plugin assertions
-        that(duration).is_less_than(0.1)  # Less than 100ms
+
+        # Should complete reasonably quickly even with JSON parsing and validation
+        that(duration).is_less_than(1.0)  # Less than 1 second
 
 
 # Lifecycle plugin will track all these tests if enabled
@@ -188,8 +231,8 @@ if __name__ == "__main__":
     print("verbose = true")
     print()
     print("Available plugin assertions:")
-    print("- .is_email() - Validate email addresses")
-    print("- .is_url() - Validate URLs")
-    print("- .is_positive() - Check positive numbers")
-    print("- .is_even() / .is_odd() - Check even/odd numbers")
-    print("- .has_length_between(min, max) - Validate length ranges")
+    print("- .as_json() - Parse JSON strings into Python objects")
+    print("- .matches_schema(schema) - Validate data against JSON schema")
+    print("- Supports complex nested schemas with arrays and objects")
+    print("- Falls back to built-in validation if jsonschema library not available")
+    print("- Demonstrates real-world plugin development patterns")

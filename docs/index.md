@@ -193,12 +193,20 @@ def test_signup():
 Extend That with custom functionality through plugins:
 
 ```python
-# Custom assertion methods (from plugins)
-that("user@example.com").is_email()
-that("https://example.com").is_url()
-that(42).is_even()
-that(7).is_positive()
-that("hello").has_length_between(3, 10)
+# JSON parsing and schema validation (from plugins)
+json_data = '{"name": "John", "age": 30, "active": true}'
+that(json_data).as_json().has_key("name")
+
+# Validate against JSON schema
+user_schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer", "minimum": 0}
+    },
+    "required": ["name", "age"]
+}
+that(json_data).as_json().matches_schema(user_schema)
 ```
 
 Create your own plugins for:

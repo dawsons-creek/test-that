@@ -40,21 +40,29 @@ def test_combined():
     pass
 ```
 
-### Example Assertion Plugin
+### JSON Schema Plugin
 
-Adds common assertion methods:
+Adds JSON parsing and schema validation capabilities:
 
 ```python
 from that import test, that
 
-@test("email validation")
-def test_email():
-    that("user@example.com").is_email()
-    that("https://example.com").is_url()
-    that(42).is_even()
-    that(7).is_odd()
-    that(5).is_positive()
-    that("hello").has_length_between(3, 10)
+@test("JSON parsing and validation")
+def test_json():
+    # Parse JSON strings
+    json_data = '{"name": "John", "age": 30}'
+    that(json_data).as_json().has_key("name")
+
+    # Validate against JSON schema
+    user_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer", "minimum": 0}
+        },
+        "required": ["name", "age"]
+    }
+    that(json_data).as_json().matches_schema(user_schema)
 ```
 
 ## Configuration
@@ -75,6 +83,9 @@ recordings_dir = "tests/recordings"
 default_http_mode = "once"
 time_format = "iso"
 http_timeout = 30
+
+[tool.that.plugins.json_schema]
+prefer_jsonschema_library = true
 
 [tool.that.plugins.example_lifecycle]
 enabled = false
@@ -142,60 +153,63 @@ Create a plugin that adds custom assertion methods:
 ```python
 from that.plugins.base import AssertionPlugin, PluginInfo
 from typing import Dict, Callable
+import json
 
-class ValidationPlugin(AssertionPlugin):
+class JSONSchemaPlugin(AssertionPlugin):
     @property
     def info(self) -> PluginInfo:
         return PluginInfo(
-            name="validation",
+            name="json_schema",
             version="1.0.0",
-            description="Custom validation assertions"
+            description="JSON parsing and schema validation",
+            optional_dependencies=['jsonschema']
         )
 
     def get_assertion_methods(self) -> Dict[str, Callable]:
         return {
-            'is_valid_uuid': self._is_valid_uuid,
-            'matches_regex': self._matches_regex,
+            'as_json': self._as_json,
+            'matches_schema': self._matches_schema,
         }
 
-    def _is_valid_uuid(self, assertion_instance):
-        import uuid
+    def _as_json(self, assertion_instance):
+        """Parse value as JSON and return assertion for parsed data."""
         value = assertion_instance.value
-        
+
         try:
-            uuid.UUID(str(value))
-            return assertion_instance
-        except ValueError:
+            parsed = json.loads(value)
+            from that.assertions import ThatAssertion
+            return ThatAssertion(parsed, f"{assertion_instance.expression}.as_json()")
+        except json.JSONDecodeError as e:
             from that.assertions import ThatAssertionError
             raise ThatAssertionError(
-                f"{assertion_instance.expression}.is_valid_uuid()",
-                expected="valid UUID",
-                actual=value
+                f"{assertion_instance.expression}.as_json()",
+                expected="valid JSON string",
+                actual=f"invalid JSON: {str(e)}"
             )
 
-    def _matches_regex(self, assertion_instance):
-        def regex_matcher(pattern: str):
-            import re
-            value = assertion_instance.value
-            
-            if not re.match(pattern, str(value)):
-                from that.assertions import ThatAssertionError
-                raise ThatAssertionError(
-                    f"{assertion_instance.expression}.matches_regex('{pattern}')",
-                    expected=f"string matching /{pattern}/",
-                    actual=value
-                )
+    def _matches_schema(self, assertion_instance):
+        """Return a function that validates against a JSON schema."""
+        def schema_validator(schema: dict):
+            # Try jsonschema library first, fall back to built-in validation
+            try:
+                import jsonschema
+                jsonschema.validate(assertion_instance.value, schema)
+            except ImportError:
+                # Use built-in validation logic here
+                pass
             return assertion_instance
-        
-        return regex_matcher
+        return schema_validator
 ```
 
 Usage:
 ```python
-@test("validation assertions")
-def test_validation():
-    that("550e8400-e29b-41d4-a716-446655440000").is_valid_uuid()
-    that("hello123").matches_regex(r"^[a-z]+\d+$")
+@test("JSON validation")
+def test_json():
+    json_data = '{"name": "John", "age": 30}'
+    that(json_data).as_json().has_key("name")
+
+    schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+    that(json_data).as_json().matches_schema(schema)
 ```
 
 ### Lifecycle Plugin

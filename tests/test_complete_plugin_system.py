@@ -27,16 +27,19 @@ with suite("Complete Plugin System Integration"):
     def test_decorator_assertion_integration():
         """Test decorator plugin (replay) with assertion plugin methods."""
         current_time = datetime.datetime.now()
-        
+
         # Use replay plugin for time freezing
         that(current_time.year).equals(2024)
         that(current_time.month).equals(1)
         that(current_time.day).equals(1)
-        
-        # Use assertion plugin for custom assertions
-        that("test@example.com").is_email()
-        that(42).is_even()
-        that("hello world").has_length_between(5, 15)
+
+        # Use JSON schema plugin for JSON assertions
+        json_data = '{"timestamp": "2024-01-01T12:00:00Z", "event": "test"}'
+        that(json_data).as_json().has_key("timestamp")
+
+        # Test schema validation
+        schema = {"type": "object", "properties": {"timestamp": {"type": "string"}}}
+        that(json_data).as_json().matches_schema(schema)
 
     @test("lifecycle plugin tracks test execution")
     def test_lifecycle_tracking():
@@ -104,10 +107,10 @@ with suite("Plugin Performance"):
         # Create multiple assertion instances
         assertion1 = that("test1")
         assertion2 = that("test2")
-        
+
         # Both should have the same custom methods
-        that(hasattr(assertion1, 'is_email')).equals(hasattr(assertion2, 'is_email'))
-        that(hasattr(assertion1, 'is_positive')).equals(hasattr(assertion2, 'is_positive'))
+        that(hasattr(assertion1, 'as_json')).equals(hasattr(assertion2, 'as_json'))
+        that(hasattr(assertion1, 'matches_schema')).equals(hasattr(assertion2, 'matches_schema'))
 
 
 with suite("Plugin Extensibility"):

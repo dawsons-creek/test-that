@@ -22,6 +22,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
+    "jsonschema>=4.23.0",
     "pyyaml>=6.0.2",
 ]
 
@@ -41,6 +42,7 @@ that-pycharm = "that.pycharm_runner:main"
 
 [project.entry-points."that.plugins"]
 replay = "that.plugins.replay:ReplayPlugin"
+json_schema = "that.plugins.json_schema_plugin:JSONSchemaPlugin"
 
 [build-system]
 requires = ["hatchling"]
@@ -81,10 +83,12 @@ default_http_mode = "once"
 time_format = "iso"
 http_timeout = 30
 
-# Example plugins (disabled by default)
-[tool.that.plugins.example_assertions]
-# No specific configuration needed
+# JSON Schema plugin (enabled by default)
+[tool.that.plugins.json_schema]
+# Prefer jsonschema library if available, fall back to built-in validation
+prefer_jsonschema_library = true
 
+# Example lifecycle plugin (disabled by default)
 [tool.that.plugins.example_lifecycle]
 enabled = false
 verbose = false

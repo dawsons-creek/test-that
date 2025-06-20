@@ -39,10 +39,10 @@ class PluginRegistry:
         self._initialized = True
 
     def load_builtin_plugins(self) -> None:
-        """Load built-in plugins (replay functionality)."""
+        """Load built-in plugins."""
         builtin_plugins = [
             'that.plugins.replay:ReplayPlugin',
-            'that.plugins.example_assertion_plugin:ExampleAssertionPlugin',
+            'that.plugins.json_schema_plugin:JSONSchemaPlugin',
             'that.plugins.example_lifecycle_plugin:ExampleLifecyclePlugin',
         ]
 
