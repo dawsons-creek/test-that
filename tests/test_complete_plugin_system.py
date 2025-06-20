@@ -6,7 +6,7 @@ Tests all plugin types working together: decorators, assertions, and lifecycle.
 
 import datetime
 import time
-from that import test, suite, that, replay
+from test_that import test, suite, that, replay
 
 
 with suite("Complete Plugin System Integration"):
@@ -14,7 +14,7 @@ with suite("Complete Plugin System Integration"):
     @test("all plugin types are loaded")
     def test_all_plugin_types():
         """Test that all plugin types are loaded correctly."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
 
         # Should have plugins of all types
         that(len(plugin_registry._plugins)).is_greater_than(1)  # At least replay + assertion
@@ -44,12 +44,12 @@ with suite("Complete Plugin System Integration"):
     @test("lifecycle plugin tracks test execution")
     def test_lifecycle_tracking():
         """Test that lifecycle plugin is tracking test execution."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Get the lifecycle plugin
         lifecycle_plugin = None
         for plugin in plugin_registry._lifecycle_plugins:
-            if plugin.info.name == "example_lifecycle":
+            if plugin.info.name == "lifecycle":
                 lifecycle_plugin = plugin
                 break
         
@@ -62,7 +62,7 @@ with suite("Complete Plugin System Integration"):
     @test("plugin configuration is loaded")
     def test_plugin_configuration():
         """Test that plugin configuration is loaded correctly."""
-        from that.plugins.config import get_plugin_specific_config
+        from test_that.plugins.config import get_plugin_specific_config
         
         # Should be able to get config for replay plugin
         replay_config = get_plugin_specific_config("replay")
@@ -73,7 +73,7 @@ with suite("Complete Plugin System Integration"):
     def test_plugin_error_handling():
         """Test that plugin errors are handled gracefully."""
         # This should not crash even if a plugin has issues
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Trigger lifecycle events (should not fail)
         plugin_registry.trigger_lifecycle_event('before_test', 'test_name')
@@ -91,7 +91,7 @@ with suite("Plugin Performance"):
         start_time = time.perf_counter()
         
         # Re-initialize plugin system
-        from that.plugins.registry import PluginRegistry
+        from test_that.plugins.registry import PluginRegistry
         test_registry = PluginRegistry()
         test_registry.initialize()
         
@@ -118,7 +118,7 @@ with suite("Plugin Extensibility"):
     @test("plugins can be discovered by name")
     def test_plugin_discovery():
         """Test that plugins can be discovered and accessed by name."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Should be able to get plugins by name
         replay_plugin = plugin_registry.get_plugin("replay")
@@ -128,7 +128,7 @@ with suite("Plugin Extensibility"):
     @test("plugin metadata is accessible")
     def test_plugin_metadata():
         """Test that plugin metadata is properly accessible."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         replay_plugin = plugin_registry.get_plugin("replay")
         that(replay_plugin.info.version).is_not_none()
@@ -138,7 +138,7 @@ with suite("Plugin Extensibility"):
     @test("plugins can be cleaned up")
     def test_plugin_cleanup():
         """Test that plugins can be properly cleaned up."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Should be able to cleanup without errors
         plugin_registry.cleanup()

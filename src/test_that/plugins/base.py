@@ -3,7 +3,7 @@ Base classes and interfaces for That plugins.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Callable
 from dataclasses import dataclass, field
 
 

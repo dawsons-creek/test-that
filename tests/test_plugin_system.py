@@ -3,7 +3,7 @@ Test the plugin system implementation.
 """
 
 import datetime
-from that import test, suite, that, replay
+from test_that import test, suite, that, replay
 
 
 with suite("Plugin System"):
@@ -11,7 +11,7 @@ with suite("Plugin System"):
     @test("plugin system loads successfully")
     def test_plugin_system():
         """Test that the plugin system initializes without errors."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Plugin registry should be initialized
         that(plugin_registry._initialized).is_true()
@@ -22,7 +22,7 @@ with suite("Plugin System"):
     @test("replay plugin is available")
     def test_replay_plugin_available():
         """Test that the replay plugin is loaded and available."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         # Should have replay plugin
         replay_plugin = plugin_registry.get_plugin("replay")
@@ -32,7 +32,7 @@ with suite("Plugin System"):
     @test("replay decorators are available")
     def test_replay_decorators():
         """Test that replay decorators are available."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
         
         decorators = plugin_registry.get_decorators()
         that(decorators).has_key("time")

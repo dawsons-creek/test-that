@@ -4,7 +4,7 @@ Example tests for the That testing library.
 Demonstrates the basic usage and features.
 """
 
-from that import test, suite, that, provide
+from test_that import test, suite, that, provide
 
 
 # Simple standalone tests

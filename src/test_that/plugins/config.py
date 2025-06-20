@@ -3,7 +3,7 @@ Configuration loading for the plugin system.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 def load_plugin_config() -> Dict[str, Any]:

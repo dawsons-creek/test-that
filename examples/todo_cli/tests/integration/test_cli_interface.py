@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from that import test, suite, that, mock
+from test_that import test, suite, that, mock
 
 
 def run_cli(args, storage_file=None):

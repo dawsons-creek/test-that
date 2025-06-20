@@ -155,8 +155,8 @@ def _is_that_test_file(file_path: str) -> bool:
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read(1000)  # Read first 1000 chars
-            return ('from that import' in content or 
-                   'import that' in content or
+            return ('from test_that import' in content or 
+                   'import test_that' in content or
                    '@test(' in content)
     except (IOError, UnicodeDecodeError):
         return False

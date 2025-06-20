@@ -11,7 +11,7 @@ pip install test-that
 Create `test_example.py`:
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("basic math works")
 def test_math():
@@ -51,7 +51,7 @@ Ran 3 tests in 156μs
 ## Group Tests with Suites
 
 ```python
-from that import test, suite, that
+from test_that import test, suite, that
 
 with suite("User Validation"):
     
@@ -92,7 +92,7 @@ Ran 4 tests in 234μs
 ## Add Test Data with Fixtures
 
 ```python
-from that import test, suite, that, provide
+from test_that import test, suite, that, provide
 
 with suite("Shopping Cart"):
     
@@ -121,7 +121,7 @@ with suite("Shopping Cart"):
 ## Test with Mocks
 
 ```python
-from that import test, that, mock
+from test_that import test, that, mock
 
 class EmailService:
     def send_email(self, to, subject, body):

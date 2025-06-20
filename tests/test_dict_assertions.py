@@ -1,6 +1,6 @@
 """Tests for dictionary and JSON assertions."""
 
-from that import test, suite, that
+from test_that import test, suite, that
 
 
 with suite("Dictionary Key Assertions"):

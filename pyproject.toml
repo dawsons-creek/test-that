@@ -37,19 +37,20 @@ Repository = "https://github.com/dawsons-creek/test-that"
 Issues = "https://github.com/dawsons-creek/test-that/issues"
 
 [project.scripts]
-that = "that.__main__:main"
-that-pycharm = "that.pycharm_runner:main"
+that = "test_that.__main__:main"
+that-pycharm = "test_that.ide.pycharm:main"
 
-[project.entry-points."that.plugins"]
-replay = "that.plugins.replay:ReplayPlugin"
-json_schema = "that.plugins.json_schema_plugin:JSONSchemaPlugin"
+[project.entry-points."test_that.plugins"]
+replay = "test_that.plugins.replay:ReplayPlugin"
+json_schema = "test_that.plugins.json_schema:JSONSchemaPlugin"
+lifecycle = "test_that.plugins.lifecycle:ExampleLifecyclePlugin"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/that"]
+packages = ["src/test_that"]
 
 [tool.uv]
 dev-dependencies = [
@@ -88,8 +89,8 @@ http_timeout = 30
 # Prefer jsonschema library if available, fall back to built-in validation
 prefer_jsonschema_library = true
 
-# Example lifecycle plugin (disabled by default)
-[tool.that.plugins.example_lifecycle]
+# Lifecycle plugin (disabled by default)
+[tool.that.plugins.lifecycle]
 enabled = false
 verbose = false
 slow_threshold = 0.1

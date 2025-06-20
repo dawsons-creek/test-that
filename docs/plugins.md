@@ -17,7 +17,7 @@ The plugin system supports three types of plugins:
 The replay plugin provides time freezing and HTTP recording capabilities:
 
 ```python
-from that import test, that, replay
+from test_that import test, that, replay
 import datetime
 import requests
 
@@ -45,7 +45,7 @@ def test_combined():
 Adds JSON parsing and schema validation capabilities:
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("JSON parsing and validation")
 def test_json():

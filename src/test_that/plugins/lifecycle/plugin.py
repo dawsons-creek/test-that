@@ -6,7 +6,7 @@ for logging, metrics collection, or other cross-cutting concerns.
 """
 
 from typing import Dict, Any
-from .base import LifecyclePlugin, PluginInfo
+from ..base import LifecyclePlugin, PluginInfo
 
 
 class ExampleLifecyclePlugin(LifecyclePlugin):
@@ -22,9 +22,9 @@ class ExampleLifecyclePlugin(LifecyclePlugin):
     @property
     def info(self) -> PluginInfo:
         return PluginInfo(
-            name="example_lifecycle",
+            name="lifecycle",
             version="1.0.0",
-            description="Example lifecycle hooks for demonstration",
+            description="Test execution lifecycle hooks and metrics collection",
             dependencies=[],
             optional_dependencies=[]
         )
@@ -57,7 +57,7 @@ class ExampleLifecyclePlugin(LifecyclePlugin):
             return
             
         if self.verbose:
-            print(f"✅ Test run completed!")
+            print("✅ Test run completed!")
             print(f"   📊 Total tests: {self.test_count}")
             print(f"   📦 Total suites: {self.suite_count}")
             

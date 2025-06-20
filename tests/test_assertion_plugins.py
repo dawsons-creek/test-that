@@ -3,7 +3,7 @@ Test assertion plugin functionality.
 """
 
 import json
-from that import test, suite, that
+from test_that import test, suite, that
 
 
 with suite("Assertion Plugin System"):
@@ -11,7 +11,7 @@ with suite("Assertion Plugin System"):
     @test("assertion plugins are loaded")
     def test_assertion_plugins_loaded():
         """Test that assertion plugins are loaded and available."""
-        from that.plugins.registry import plugin_registry
+        from test_that.plugins.registry import plugin_registry
 
         # Should have assertion methods from plugins
         assertion_methods = plugin_registry.get_assertion_methods()

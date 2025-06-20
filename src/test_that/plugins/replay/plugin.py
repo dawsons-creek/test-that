@@ -2,7 +2,7 @@
 Replay plugin implementation for the That testing library.
 """
 
-from typing import Dict, Any, Callable, Union, Optional
+from typing import Dict, Any, Callable, Union
 from ..base import DecoratorPlugin, PluginInfo
 from .time_freeze import TimeFreeze
 from .http_recording import HTTPRecorder

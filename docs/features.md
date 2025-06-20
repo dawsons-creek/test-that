@@ -5,7 +5,7 @@
 Mock object methods and verify calls.
 
 ```python
-from that import test, that, mock
+from test_that import test, that, mock
 
 @test("sends welcome email")  
 def test_welcome():
@@ -28,7 +28,7 @@ def test_welcome():
 Control time for deterministic testing.
 
 ```python
-from that import test, that, replay
+from test_that import test, that, replay
 import datetime
 
 @test("user has correct creation timestamp")
@@ -45,7 +45,7 @@ def test_user_timestamp():
 Record and replay HTTP requests for deterministic API testing.
 
 ```python
-from that import test, that, replay
+from test_that import test, that, replay
 import requests
 
 @test("fetches user from API")
@@ -64,7 +64,7 @@ def test_api_call():
 Test JSON data and nested dictionaries with ease.
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("validates complex API response")
 def test_api_validation():

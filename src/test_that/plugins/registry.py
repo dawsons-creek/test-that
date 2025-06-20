@@ -4,7 +4,6 @@ Plugin registry and management for the That testing library.
 
 import importlib
 import importlib.util
-from pathlib import Path
 from typing import Dict, List, Type, Any, Optional, Callable
 
 from .base import PluginBase, PluginInfo, DecoratorPlugin, AssertionPlugin, LifecyclePlugin
@@ -41,9 +40,9 @@ class PluginRegistry:
     def load_builtin_plugins(self) -> None:
         """Load built-in plugins."""
         builtin_plugins = [
-            'that.plugins.replay:ReplayPlugin',
-            'that.plugins.json_schema_plugin:JSONSchemaPlugin',
-            'that.plugins.example_lifecycle_plugin:ExampleLifecyclePlugin',
+            'test_that.plugins.replay:ReplayPlugin',
+            'test_that.plugins.json_schema:JSONSchemaPlugin',
+            'test_that.plugins.lifecycle:ExampleLifecyclePlugin',
         ]
 
         for plugin_spec in builtin_plugins:
@@ -59,10 +58,10 @@ class PluginRegistry:
             entry_points = importlib.metadata.entry_points()
             if hasattr(entry_points, 'get'):
                 # Older style
-                plugin_entry_points = entry_points.get('that.plugins', [])
+                plugin_entry_points = entry_points.get('test_that.plugins', [])
             else:
                 # Newer style (Python 3.10+)
-                plugin_entry_points = entry_points.select(group='that.plugins')
+                plugin_entry_points = entry_points.select(group='test_that.plugins')
 
             for entry_point in plugin_entry_points:
                 try:

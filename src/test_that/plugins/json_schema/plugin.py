@@ -8,8 +8,8 @@ optional dependencies in plugins.
 
 import json
 import re
-from typing import Dict, Callable, Any, List, Union
-from .base import AssertionPlugin, PluginInfo
+from typing import Dict, Callable, Any, List
+from ..base import AssertionPlugin, PluginInfo
 
 
 class JSONSchemaPlugin(AssertionPlugin):
@@ -43,7 +43,7 @@ class JSONSchemaPlugin(AssertionPlugin):
         expression = assertion_instance.expression
         
         if not isinstance(value, str):
-            from ..assertions import ThatAssertionError
+            from ...assertions import ThatAssertionError
             raise ThatAssertionError(
                 f"{expression}.as_json()",
                 expected="JSON string",
@@ -53,10 +53,10 @@ class JSONSchemaPlugin(AssertionPlugin):
         try:
             parsed = json.loads(value)
             # Create a new assertion instance for the parsed data
-            from ..assertions import ThatAssertion
+            from ...assertions import ThatAssertion
             return ThatAssertion(parsed, f"{expression}.as_json()")
         except json.JSONDecodeError as e:
-            from ..assertions import ThatAssertionError
+            from ...assertions import ThatAssertionError
             raise ThatAssertionError(
                 f"{expression}.as_json()",
                 expected="valid JSON string",
@@ -76,7 +76,7 @@ class JSONSchemaPlugin(AssertionPlugin):
                     jsonschema.validate(value, schema)
                     return assertion_instance
                 except jsonschema.ValidationError as e:
-                    from ..assertions import ThatAssertionError
+                    from ...assertions import ThatAssertionError
                     raise ThatAssertionError(
                         f"{expression}.matches_schema(...)",
                         expected="data matching schema",
@@ -84,7 +84,7 @@ class JSONSchemaPlugin(AssertionPlugin):
                         diff_lines=["Schema validation error:", f"  {str(e)}"]
                     )
                 except jsonschema.SchemaError as e:
-                    from ..assertions import ThatAssertionError
+                    from ...assertions import ThatAssertionError
                     raise ThatAssertionError(
                         f"{expression}.matches_schema(...)",
                         expected="valid JSON schema",
@@ -96,7 +96,7 @@ class JSONSchemaPlugin(AssertionPlugin):
                 validation_errors = self._validate_json_schema_builtin(value, schema)
                 if validation_errors:
                     error_details = "\n  ".join(validation_errors)
-                    from ..assertions import ThatAssertionError
+                    from ...assertions import ThatAssertionError
                     raise ThatAssertionError(
                         f"{expression}.matches_schema(...)",
                         expected="data matching schema",

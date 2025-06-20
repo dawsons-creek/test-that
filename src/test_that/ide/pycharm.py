@@ -56,7 +56,7 @@ Project conftest.py - enables That test discovery through pytest.
 """
 
 # Import the pytest compatibility hooks directly
-from that.ide.pytest_compat import (
+from test_that.ide.pytest_compat import (
     pytest_collect_file,
     pytest_configure,
     pytest_collection_modifyitems,
@@ -107,7 +107,7 @@ class ThatPyCharmPlugin:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read(1000)  # Read first 1000 chars
-                return 'from that import' in content or 'import that' in content
+                return 'from test_that import' in content or 'import test_that' in content
         except (IOError, UnicodeDecodeError):
             return False
     
@@ -140,7 +140,7 @@ class ThatPyCharmPlugin:
     @staticmethod
     def get_test_runner_command(test_path: str = None, test_name: str = None) -> List[str]:
         """Get command to run tests from command line."""
-        cmd = [sys.executable, '-m', 'that']
+        cmd = [sys.executable, '-m', 'test_that']
         
         if test_path:
             if test_name:
@@ -149,3 +149,12 @@ class ThatPyCharmPlugin:
                 cmd.append(test_path)
         
         return cmd
+
+
+def main():
+    """Main entry point for PyCharm integration setup."""
+    setup_pycharm_integration()
+
+
+if __name__ == '__main__':
+    main()

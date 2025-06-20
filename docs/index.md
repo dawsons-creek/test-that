@@ -23,7 +23,7 @@ pip install test-that
 ### Write a test
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("math works correctly")
 def test_addition():
@@ -50,7 +50,7 @@ Ran 1 test in 12μs
 ### Tests and Suites
 
 ```python
-from that import test, suite, that
+from test_that import test, suite, that
 
 # Simple test
 @test("validates user email")
@@ -74,7 +74,7 @@ with suite("User Management"):
 ### Fixtures
 
 ```python
-from that import test, suite, that, provide
+from test_that import test, suite, that, provide
 
 with suite("Database Tests"):
     
@@ -97,7 +97,7 @@ with suite("Database Tests"):
 ### Mocking
 
 ```python
-from that import test, that, mock
+from test_that import test, that, mock
 
 @test("sends welcome email")
 def test_welcome_email():
@@ -118,7 +118,7 @@ def test_welcome_email():
 ### Time Control
 
 ```python
-from that import test, that, replay
+from test_that import test, that, replay
 import datetime
 
 @test("user has correct creation timestamp")
@@ -133,7 +133,7 @@ def test_user_timestamp():
 ### JSON & Dictionary Testing
 
 ```python
-from that import test, that
+from test_that import test, that
 
 @test("validates API response")
 def test_api_response():
@@ -160,7 +160,7 @@ def test_api_response():
 ### HTTP Recording
 
 ```python
-from that import test, that, replay
+from test_that import test, that, replay
 import requests
 
 @test("fetches user from API")

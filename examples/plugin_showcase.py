@@ -9,11 +9,11 @@ This example demonstrates all three types of plugins working together:
 
 import datetime
 import requests
-from that import test, suite, that, replay
+from test_that import test, suite, that, replay
 
 
 # Enable lifecycle plugin for this demo
-# (You can enable it in pyproject.toml: [tool.that.plugins.example_lifecycle] enabled = true)
+# (You can enable it in pyproject.toml: [tool.that.plugins.lifecycle] enabled = true)
 
 with suite("Plugin System Showcase"):
     
@@ -226,7 +226,7 @@ if __name__ == "__main__":
     print("Run with: uv run python -m that examples/plugin_showcase.py")
     print()
     print("To enable lifecycle plugin output, add to pyproject.toml:")
-    print("[tool.that.plugins.example_lifecycle]")
+    print("[tool.that.plugins.lifecycle]")
     print("enabled = true")
     print("verbose = true")
     print()

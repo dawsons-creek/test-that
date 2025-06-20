@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from that import test, suite, that, replay
+from test_that import test, suite, that, replay
 from todo_cli.src.models import Todo, Priority, Status
 
 

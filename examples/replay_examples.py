@@ -6,7 +6,7 @@ Shows various usage patterns for time freezing and HTTP recording.
 
 import datetime
 import requests
-from that import test, suite, that, replay
+from test_that import test, suite, that, replay
 
 
 # Basic time freezing

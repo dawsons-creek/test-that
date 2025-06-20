@@ -5,7 +5,6 @@ Provides a fluent interface for making assertions about values.
 """
 
 import re
-import json
 from typing import Any, Callable, Pattern, Type, Union, List, Dict
 
 
