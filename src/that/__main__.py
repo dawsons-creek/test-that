@@ -441,33 +441,14 @@ def update_registry_with_filtered_tests(filtered_tests, all_tests):
             suite.add_test(test_name, test_func, 0)
 
 
-def parse_tag_filters(args) -> Tuple[Optional[set], Optional[set]]:
-    """Parse tag filter arguments."""
-    include_tags = None
-    exclude_tags = None
-
-    if args.include_tags:
-        include_tags = set(tag.strip() for tag in args.include_tags.split(','))
-
-    if args.exclude_tags:
-        exclude_tags = set(tag.strip() for tag in args.exclude_tags.split(','))
-
-    if args.skip_slow:
-        if exclude_tags is None:
-            exclude_tags = set()
-        exclude_tags.add('slow')
-
-    return include_tags, exclude_tags
 
 
-def run_tests_and_format_output(args, config, include_tags, exclude_tags, registry):
+def run_tests_and_format_output(args, config, registry):
     """Run tests and format output."""
     verbose = args.verbose or config["verbose"]
     use_color = not args.no_color and config["color"]
 
-    runner = TestRunner(
-        verbose=verbose, include_tags=include_tags, exclude_tags=exclude_tags
-    )
+    runner = TestRunner(verbose=verbose)
     results = runner.run_all()
 
     formatter = TestFormatter(
@@ -510,11 +491,7 @@ def main():
     )
     update_registry_with_filtered_tests(filtered_tests, all_tests)
 
-    include_tags, exclude_tags = parse_tag_filters(args)
-
-    return run_tests_and_format_output(
-        args, config, include_tags, exclude_tags, registry
-    )
+    return run_tests_and_format_output(args, config, registry)
 
 
 if __name__ == "__main__":

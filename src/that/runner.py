@@ -184,12 +184,9 @@ def suite(name: str):
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False, include_tags: Set[str] = None, 
-                 exclude_tags: Set[str] = None):
+    def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.results: List[TestResult] = []
-        self.include_tags = include_tags
-        self.exclude_tags = exclude_tags
 
     def run_test(self, test_name: str, test_func: Callable) -> TestResult:
         """Run a single test function (supports both sync and async)."""
@@ -218,30 +215,21 @@ class TestRunner:
 
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""
-        from .tags import get_tag_registry
-        tag_registry = get_tag_registry()
-        
         results = []
         for test_name, test_func, _ in suite.tests:
-            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
-                result = self.run_test(test_name, test_func)
-                results.append(result)
+            result = self.run_test(test_name, test_func)
+            results.append(result)
         
         return results
 
     def run_all(self) -> List[TestResult]:
         """Run all registered tests."""
-        from .tags import get_tag_registry
-        tag_registry = get_tag_registry()
-        
         all_results = []
 
         # Run standalone tests
         for test_name, test_func, _ in _registry.standalone_tests:
-            # Check if test should run based on tags
-            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
-                result = self.run_test(test_name, test_func)
-                all_results.append(result)
+            result = self.run_test(test_name, test_func)
+            all_results.append(result)
 
         # Run suite tests
         for suite_name, suite in _registry.suites.items():
