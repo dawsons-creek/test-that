@@ -204,12 +204,9 @@ def suite(name: str):
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False, include_tags: Set[str] = None,
-                 exclude_tags: Set[str] = None):
+    def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.results: List[TestResult] = []
-        self.include_tags = include_tags
-        self.exclude_tags = exclude_tags
 
     def run_test(
         self, test_name: str, test_func: Callable, setup_result: Any = None
@@ -249,17 +246,12 @@ class TestRunner:
 
     def run_all(self) -> List[TestResult]:
         """Run all registered tests."""
-        from .tags import get_tag_registry
-        tag_registry = get_tag_registry()
-
         all_results = []
 
         # Run standalone tests
         for test_name, test_func, _ in _registry.standalone_tests:
-            # Check if test should run based on tags
-            if tag_registry.should_run(test_func, self.include_tags, self.exclude_tags):
-                result = self.run_test(test_name, test_func)
-                all_results.append(result)
+            result = self.run_test(test_name, test_func)
+            all_results.append(result)
 
         # Run suite tests
         for _suite_name, suite in _registry.suites.items():
@@ -329,15 +321,11 @@ def _create_setup_failure_results(suite: TestSuite) -> List[TestResult]:
 
 
 def _run_suite_tests(suite: TestSuite, setup_result: Any, runner) -> List[TestResult]:
-    """Run all tests in the suite that pass tag filtering."""
-    from .tags import get_tag_registry
-    tag_registry = get_tag_registry()
-
+    """Run all tests in the suite."""
     results = []
     for test_name, test_func, _ in suite.tests:
-        if tag_registry.should_run(test_func, runner.include_tags, runner.exclude_tags):
-            result = runner.run_test(test_name, test_func, setup_result)
-            results.append(result)
+        result = runner.run_test(test_name, test_func, setup_result)
+        results.append(result)
 
     return results
 
