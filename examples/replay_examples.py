@@ -107,40 +107,36 @@ def test_context_with_http():
 
 # Test suite with shared time context
 with suite("User Management Tests"):
-    def setup():
-        """Setup shared test data."""
-        return {
-            "test_user": {
-                "name": "John Doe",
-                "email": "john@example.com"
-            }
-        }
-    
+    # Test data
+    test_user = {
+        "name": "John Doe",
+        "email": "john@example.com"
+    }
+
     # All tests in this context will use the same frozen time
     with replay.time("2024-01-01T12:00:00Z"):
         @test("create user")
         @replay.http("create_user")
-        def test_create_user(context):
+        def test_create_user():
             """Test user creation with frozen time."""
-            user_data = context["test_user"]
             current_time = datetime.datetime.now()
-            
+
             response = requests.post(
                 "https://jsonplaceholder.typicode.com/users",
-                json={**user_data, "created_at": current_time.isoformat()}
+                json={**test_user, "created_at": current_time.isoformat()}
             )
-            
+
             that(response.status_code).equals(201)
             created_user = response.json()
             that(created_user).contains("id")
-        
+
         @test("get user")
         @replay.http("get_user")
-        def test_get_user(context):
+        def test_get_user():
             """Test user retrieval with frozen time."""
             response = requests.get("https://jsonplaceholder.typicode.com/users/1")
             that(response.status_code).equals(200)
-            
+
             user = response.json()
             that(user).contains("name")
             that(user).contains("email")
@@ -156,10 +152,10 @@ def test_force_record():
 
 
 @test("HTTP recording in replay-only mode")
-@replay.http("existing_recording", mode="replay_only")
+@replay.http("get_user", mode="replay_only")
 def test_replay_only():
-    """Test replay-only mode (will fail if recording doesn't exist)."""
-    # This test assumes the recording already exists
+    """Test replay-only mode (uses recording from previous test)."""
+    # This test uses the recording created by the "get user" test
     response = requests.get("https://jsonplaceholder.typicode.com/users/1")
     that(response.status_code).equals(200)
 
@@ -171,8 +167,8 @@ def test_invalid_time_format():
     def create_invalid_time():
         with replay.time("not-a-valid-date"):
             pass
-    
-    that(create_invalid_time).raises(RuntimeError)
+
+    that(create_invalid_time).raises(ValueError)
 
 
 # Real-world scenario: API testing with timestamps

@@ -14,9 +14,25 @@ Usage:
 
 from .assertions import that
 from .runner import test, suite
-from .features.replay import replay
 from .mocking import mock, mock_that
 from .with_fixtures import provide
+
+# Initialize plugin system
+from .plugins.registry import plugin_registry
+
+def _initialize_plugins():
+    """Initialize plugin system."""
+    plugin_registry.initialize()
+
+# Initialize plugins on import
+_initialize_plugins()
+
+# Import replay API from plugin (will be available if plugin loads successfully)
+try:
+    from .plugins.replay import replay
+    __replay_available__ = ["replay"]
+except ImportError:
+    __replay_available__ = []
 
 # IDE integration (optional import)
 try:
@@ -30,4 +46,4 @@ except ImportError:
     __all_ide__ = []
 
 __version__ = "0.2.0"
-__all__ = ["test", "suite", "that", "replay", "mock", "mock_that", "provide"] + __all_ide__
+__all__ = ["test", "suite", "that", "mock", "mock_that", "provide"] + __replay_available__ + __all_ide__

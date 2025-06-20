@@ -192,10 +192,14 @@ class TestRunner:
         """Run a single test function (supports both sync and async)."""
         from .mocking import cleanup_mocks
         from .with_fixtures import clear_fixture_cache
-        
+        from .plugins.registry import plugin_registry
+
         # Clear fixture cache before each test for fresh instances
         clear_fixture_cache()
-        
+
+        # Trigger before_test lifecycle event
+        plugin_registry.trigger_lifecycle_event('before_test', test_name)
+
         start_time = time.perf_counter()
 
         try:
@@ -205,25 +209,48 @@ class TestRunner:
                 test_func()
 
             duration = time.perf_counter() - start_time
-            return TestResult(test_name, True, duration=duration)
+            result = TestResult(test_name, True, duration=duration)
+
+            # Trigger after_test lifecycle event
+            plugin_registry.trigger_lifecycle_event('after_test', test_name, result)
+
+            return result
 
         except Exception as e:
             duration = time.perf_counter() - start_time
-            return TestResult(test_name, False, error=e, duration=duration)
+            result = TestResult(test_name, False, error=e, duration=duration)
+
+            # Trigger after_test lifecycle event even on failure
+            plugin_registry.trigger_lifecycle_event('after_test', test_name, result)
+
+            return result
         finally:
             cleanup_mocks()
 
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""
+        from .plugins.registry import plugin_registry
+
+        # Trigger before_suite lifecycle event
+        plugin_registry.trigger_lifecycle_event('before_suite', suite.name)
+
         results = []
         for test_name, test_func, _ in suite.tests:
             result = self.run_test(test_name, test_func)
             results.append(result)
-        
+
+        # Trigger after_suite lifecycle event
+        plugin_registry.trigger_lifecycle_event('after_suite', suite.name)
+
         return results
 
     def run_all(self) -> List[TestResult]:
         """Run all registered tests."""
+        from .plugins.registry import plugin_registry
+
+        # Trigger before_test_run lifecycle event
+        plugin_registry.trigger_lifecycle_event('before_test_run')
+
         all_results = []
 
         # Run standalone tests
@@ -237,6 +264,10 @@ class TestRunner:
             all_results.extend(suite_results)
 
         self.results = all_results
+
+        # Trigger after_test_run lifecycle event
+        plugin_registry.trigger_lifecycle_event('after_test_run')
+
         return all_results
 
     def get_summary(self) -> Tuple[int, int, int, float]:

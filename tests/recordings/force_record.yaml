@@ -1,0 +1,128 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    url: https://jsonplaceholder.typicode.com/users/2
+  response:
+    body: "{\n  \"id\": 2,\n  \"name\": \"Ervin Howell\",\n  \"username\": \"Antonette\"\
+      ,\n  \"email\": \"Shanna@melissa.tv\",\n  \"address\": {\n    \"street\": \"\
+      Victor Plains\",\n    \"suite\": \"Suite 879\",\n    \"city\": \"Wisokyburgh\"\
+      ,\n    \"zipcode\": \"90566-7771\",\n    \"geo\": {\n      \"lat\": \"-43.9509\"\
+      ,\n      \"lng\": \"-34.4618\"\n    }\n  },\n  \"phone\": \"010-692-6593 x09125\"\
+      ,\n  \"website\": \"anastasia.net\",\n  \"company\": {\n    \"name\": \"Deckow-Crist\"\
+      ,\n    \"catchPhrase\": \"Proactive didactic contingency\",\n    \"bs\": \"\
+      synergize scalable supply-chains\"\n  }\n}"
+    headers:
+      Access-Control-Allow-Credentials: 'true'
+      Age: '9325'
+      CF-RAY: 95287c5c49f07beb-LAX
+      Cache-Control: max-age=43200
+      Cf-Cache-Status: HIT
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 20 Jun 2025 04:22:33 GMT
+      Etag: W/"1fd-XTG63SYhaP/Uo6/vgmARnL3rpBk"
+      Expires: '-1'
+      Nel: '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      Pragma: no-cache
+      Report-To: '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1749155146"}],"max_age":3600}'
+      Reporting-Endpoints: heroku-nel="https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&ts=1749155146"
+      Server: cloudflare
+      Transfer-Encoding: chunked
+      Vary: Origin, Accept-Encoding
+      Via: 2.0 heroku-router
+      X-Content-Type-Options: nosniff
+      X-Powered-By: Express
+      X-Ratelimit-Limit: '1000'
+      X-Ratelimit-Remaining: '999'
+      X-Ratelimit-Reset: '1749155169'
+      alt-svc: h3=":443"; ma=86400
+    is_binary: false
+    status: 200
+- request:
+    body: null
+    headers: {}
+    method: GET
+    url: https://jsonplaceholder.typicode.com/users/2
+  response:
+    body: "{\n  \"id\": 2,\n  \"name\": \"Ervin Howell\",\n  \"username\": \"Antonette\"\
+      ,\n  \"email\": \"Shanna@melissa.tv\",\n  \"address\": {\n    \"street\": \"\
+      Victor Plains\",\n    \"suite\": \"Suite 879\",\n    \"city\": \"Wisokyburgh\"\
+      ,\n    \"zipcode\": \"90566-7771\",\n    \"geo\": {\n      \"lat\": \"-43.9509\"\
+      ,\n      \"lng\": \"-34.4618\"\n    }\n  },\n  \"phone\": \"010-692-6593 x09125\"\
+      ,\n  \"website\": \"anastasia.net\",\n  \"company\": {\n    \"name\": \"Deckow-Crist\"\
+      ,\n    \"catchPhrase\": \"Proactive didactic contingency\",\n    \"bs\": \"\
+      synergize scalable supply-chains\"\n  }\n}"
+    headers:
+      Access-Control-Allow-Credentials: 'true'
+      Age: '9383'
+      CF-RAY: 95287dcbdbdbc69d-LAX
+      Cache-Control: max-age=43200
+      Cf-Cache-Status: HIT
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 20 Jun 2025 04:23:32 GMT
+      Etag: W/"1fd-XTG63SYhaP/Uo6/vgmARnL3rpBk"
+      Expires: '-1'
+      Nel: '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      Pragma: no-cache
+      Report-To: '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1749155146"}],"max_age":3600}'
+      Reporting-Endpoints: heroku-nel="https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&ts=1749155146"
+      Server: cloudflare
+      Transfer-Encoding: chunked
+      Vary: Origin, Accept-Encoding
+      Via: 2.0 heroku-router
+      X-Content-Type-Options: nosniff
+      X-Powered-By: Express
+      X-Ratelimit-Limit: '1000'
+      X-Ratelimit-Remaining: '999'
+      X-Ratelimit-Reset: '1749155169'
+      alt-svc: h3=":443"; ma=86400
+    is_binary: false
+    status: 200
+- request:
+    body: null
+    headers: {}
+    method: GET
+    url: https://jsonplaceholder.typicode.com/users/2
+  response:
+    body: "{\n  \"id\": 2,\n  \"name\": \"Ervin Howell\",\n  \"username\": \"Antonette\"\
+      ,\n  \"email\": \"Shanna@melissa.tv\",\n  \"address\": {\n    \"street\": \"\
+      Victor Plains\",\n    \"suite\": \"Suite 879\",\n    \"city\": \"Wisokyburgh\"\
+      ,\n    \"zipcode\": \"90566-7771\",\n    \"geo\": {\n      \"lat\": \"-43.9509\"\
+      ,\n      \"lng\": \"-34.4618\"\n    }\n  },\n  \"phone\": \"010-692-6593 x09125\"\
+      ,\n  \"website\": \"anastasia.net\",\n  \"company\": {\n    \"name\": \"Deckow-Crist\"\
+      ,\n    \"catchPhrase\": \"Proactive didactic contingency\",\n    \"bs\": \"\
+      synergize scalable supply-chains\"\n  }\n}"
+    headers:
+      Access-Control-Allow-Credentials: 'true'
+      Age: '9414'
+      CF-RAY: 95287e8bfc4e0ff9-LAX
+      Cache-Control: max-age=43200
+      Cf-Cache-Status: HIT
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 20 Jun 2025 04:24:03 GMT
+      Etag: W/"1fd-XTG63SYhaP/Uo6/vgmARnL3rpBk"
+      Expires: '-1'
+      Nel: '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      Pragma: no-cache
+      Report-To: '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1749155146"}],"max_age":3600}'
+      Reporting-Endpoints: heroku-nel="https://nel.heroku.com/reports?s=Mto38k2FP5nyVY9bPHpM56HWwD2YafT4F608tZ2e80Y%3D&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&ts=1749155146"
+      Server: cloudflare
+      Transfer-Encoding: chunked
+      Vary: Origin, Accept-Encoding
+      Via: 2.0 heroku-router
+      X-Content-Type-Options: nosniff
+      X-Powered-By: Express
+      X-Ratelimit-Limit: '1000'
+      X-Ratelimit-Remaining: '999'
+      X-Ratelimit-Reset: '1749155169'
+      alt-svc: h3=":443"; ma=86400
+    is_binary: false
+    status: 200
+version: 1

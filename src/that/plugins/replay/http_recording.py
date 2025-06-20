@@ -145,7 +145,8 @@ class HTTPRecorder:
             # Convert json to data if provided
             body = data
             if json is not None:
-                body = json if isinstance(json, str) else json.dumps(json)
+                import json as json_module
+                body = json if isinstance(json, str) else json_module.dumps(json)
 
             # Look for existing interaction
             matching = self._find_matching_interaction(method, url, headers or {}, body)

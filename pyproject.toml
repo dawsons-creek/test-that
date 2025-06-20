@@ -39,6 +39,9 @@ Issues = "https://github.com/dawsons-creek/test-that/issues"
 that = "that.__main__:main"
 that-pycharm = "that.pycharm_runner:main"
 
+[project.entry-points."that.plugins"]
+replay = "that.plugins.replay:ReplayPlugin"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -62,3 +65,18 @@ test_dir = "tests"
 pattern = "test_*.py"
 verbose = false
 color = true
+
+# Plugin system configuration
+[tool.that.plugins]
+# Enable/disable plugins (empty list means all available plugins are enabled)
+enabled = []
+disabled = []
+auto_discover = true
+fail_on_plugin_error = false
+
+# Plugin-specific configuration
+[tool.that.plugins.replay]
+recordings_dir = "tests/recordings"
+default_http_mode = "once"
+time_format = "iso"
+http_timeout = 30
