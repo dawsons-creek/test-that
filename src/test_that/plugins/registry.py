@@ -6,19 +6,27 @@ and performance optimizations.
 """
 
 import importlib
-import importlib.util
 import importlib.metadata
+import importlib.util
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Type, Any, Optional, Callable, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Type
+
 from packaging import version
 
 from .base import (
-    PluginBase, PluginInfo, DecoratorPlugin, AssertionPlugin, LifecyclePlugin,
-    PluginError, PluginConflictError, PluginDependencyError, PluginVersionError
+    AssertionPlugin,
+    DecoratorPlugin,
+    LifecyclePlugin,
+    PluginBase,
+    PluginConflictError,
+    PluginDependencyError,
+    PluginError,
+    PluginInfo,
+    PluginVersionError,
 )
-from .config import load_plugin_config, get_plugin_specific_config, is_plugin_enabled
+from .config import get_plugin_specific_config, is_plugin_enabled, load_plugin_config
 
 
 class PluginRegistry:
@@ -41,28 +49,28 @@ class PluginRegistry:
         with self._lock:
             if self._initialized and not force:
                 return
-            
+
             start_time = time.perf_counter()
-            
+
             try:
                 # Load configuration
                 self._config = load_plugin_config()
-                
+
                 # Load built-in plugins
                 self._load_builtin_plugins()
-                
+
                 # Load external plugins from entry points
                 self._load_entry_point_plugins()
-                
+
                 # Load plugins from directories
                 self._load_directory_plugins()
-                
+
                 self._initialized = True
-                
+
                 load_time = time.perf_counter() - start_time
                 if load_time > self._config.get('max_load_time', 5.0):
                     print(f"Warning: Plugin loading took {load_time:.2f}s")
-                
+
             except Exception as e:
                 if self._config.get('fail_on_plugin_error', False):
                     raise
@@ -72,10 +80,10 @@ class PluginRegistry:
         """Register a plugin with conflict detection and validation."""
         with self._lock:
             plugin = plugin_class()
-            
+
             # Validate plugin info
             self._validate_plugin_info(plugin.info)
-            
+
             # Check for conflicts
             if plugin.info.name in self._plugins and not force:
                 existing = self._plugins[plugin.info.name]
@@ -87,7 +95,7 @@ class PluginRegistry:
                 else:
                     print(f"Warning: Overriding plugin {plugin.info.name} "
                           f"v{existing.info.version} with v{plugin.info.version}")
-            
+
             # Check dependencies
             missing_deps = plugin.validate_dependencies()
             if missing_deps:
@@ -97,10 +105,10 @@ class PluginRegistry:
                 else:
                     print(f"Warning: {error_msg}")
                     return
-            
+
             # Check version compatibility
             self._check_version_compatibility(plugin.info)
-            
+
             # Initialize plugin
             plugin_config = get_plugin_specific_config(plugin.info.name)
             try:
@@ -109,10 +117,10 @@ class PluginRegistry:
                 self._plugin_load_times[plugin.info.name] = time.perf_counter() - start_time
             except Exception as e:
                 raise PluginError(f"Plugin '{plugin.info.name}' initialization failed: {e}")
-            
+
             # Register by type with priority sorting
             self._plugins[plugin.info.name] = plugin
-            
+
             if isinstance(plugin, DecoratorPlugin):
                 self._decorator_plugins[plugin.info.name] = plugin
             if isinstance(plugin, AssertionPlugin):
@@ -135,7 +143,7 @@ class PluginRegistry:
             # Check if already loaded
             if name in self._plugins:
                 return self._plugins[name]
-            
+
             # Check if available for lazy loading
             if name in self._lazy_plugins:
                 try:
@@ -146,7 +154,7 @@ class PluginRegistry:
                 except Exception as e:
                     self._failed_plugins.add(name)
                     print(f"Warning: Failed to load lazy plugin '{name}': {e}")
-            
+
             return None
 
     def get_decorators(self) -> Dict[str, Any]:
@@ -209,7 +217,7 @@ class PluginRegistry:
                     'priority': plugin.info.priority
                 }
                 plugins_info.append(info)
-            
+
             # Add lazy plugins
             for name in self._lazy_plugins:
                 plugins_info.append({
@@ -221,7 +229,7 @@ class PluginRegistry:
                     'load_time': 0,
                     'priority': 100
                 })
-            
+
             return sorted(plugins_info, key=lambda p: p['name'])
 
     def cleanup(self) -> None:
@@ -232,7 +240,7 @@ class PluginRegistry:
                     plugin.cleanup()
                 except Exception as e:
                     print(f"Warning: Plugin {plugin.info.name} cleanup failed: {e}")
-            
+
             self._plugins.clear()
             self._decorator_plugins.clear()
             self._assertion_plugins.clear()
@@ -287,7 +295,7 @@ class PluginRegistry:
                 name = entry_point.name
                 if is_plugin_enabled(name):
                     self.register_lazy_plugin(
-                        name, 
+                        name,
                         lambda ep=entry_point: ep.load()
                     )
         except Exception as e:
@@ -303,7 +311,7 @@ class PluginRegistry:
         """Scan directory for plugin files."""
         if not directory.exists():
             return
-        
+
         for file_path in directory.glob("*.py"):
             if file_path.name.startswith("plugin_"):
                 name = file_path.stem[7:]  # Remove "plugin_" prefix
@@ -324,28 +332,28 @@ class PluginRegistry:
         spec = importlib.util.spec_from_file_location(f"plugin_{file_path.stem}", file_path)
         if spec is None or spec.loader is None:
             raise ImportError(f"Could not load plugin from {file_path}")
-        
+
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        
+
         # Look for plugin class
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (isinstance(attr, type) and 
-                issubclass(attr, PluginBase) and 
+            if (isinstance(attr, type) and
+                issubclass(attr, PluginBase) and
                 attr != PluginBase):
                 return attr
-        
+
         raise ImportError(f"No plugin class found in {file_path}")
 
     def _validate_plugin_info(self, info: PluginInfo) -> None:
         """Validate plugin metadata."""
         if not info.name:
             raise ValueError("Plugin name cannot be empty")
-        
+
         if not info.version:
             raise ValueError("Plugin version cannot be empty")
-        
+
         try:
             version.parse(info.version)
         except version.InvalidVersion:
@@ -356,7 +364,7 @@ class PluginRegistry:
         # This would check against the actual That version
         # For now, we'll assume compatibility
         current_version = "0.2.0"  # Would come from test_that.__version__
-        
+
         try:
             if (version.parse(current_version) < version.parse(info.min_that_version) or
                 version.parse(current_version) > version.parse(info.max_that_version)):

@@ -8,10 +8,10 @@ import argparse
 import importlib.util
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Set, Tuple
 
-from .runner import TestRunner, get_registry, clear_registry
 from .output import TestFormatter
+from .runner import TestRunner, clear_registry, get_registry
 
 
 def discover_test_files(
@@ -492,7 +492,7 @@ def main():
     """Main CLI entry point."""
     parser = create_argument_parser()
     args = parser.parse_args()
-    
+
     # Handle plugin subcommands
     if hasattr(args, 'subcommand') and args.subcommand:
         if args.subcommand == 'plugins':
@@ -503,7 +503,7 @@ def main():
             template = PluginTemplate()
             try:
                 template.create_plugin(
-                    args.name, args.type, 
+                    args.name, args.type,
                     args.description or f"A {args.type} plugin",
                     args.author, args.output_dir
                 )
@@ -512,7 +512,7 @@ def main():
             except Exception as e:
                 print(f"Error creating plugin: {e}")
                 return 1
-    
+
     config = load_config()
 
     if args.watch:

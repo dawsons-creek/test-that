@@ -4,9 +4,9 @@ import tempfile
 from pathlib import Path
 
 from test_that import provide
-from todo_cli.src.models import Todo, Priority, Status
-from todo_cli.src.storage import MemoryStorage, FileStorage
 from todo_cli.src.commands import TodoCommands
+from todo_cli.src.models import Priority, Status, Todo
+from todo_cli.src.storage import FileStorage, MemoryStorage
 
 
 @provide
@@ -18,7 +18,7 @@ def temp_storage_file():
     Path(tmp.name).unlink(missing_ok=True)
 
 
-@provide  
+@provide
 def memory_storage():
     """Provide a fresh memory storage instance."""
     return MemoryStorage()
@@ -54,7 +54,7 @@ def sample_todos():
             tags=["work", "urgent", "finance"]
         ),
         Todo(
-            id="work-2", 
+            id="work-2",
             title="Review pull requests",
             description="Review team's PRs from this week",
             priority=Priority.MEDIUM,
@@ -99,26 +99,26 @@ def cli_runner():
     """Helper to run CLI commands and capture output."""
     import subprocess
     import sys
-    
+
     def run_command(args, storage_file=None):
         """Run todo CLI command and return output."""
         cmd = [sys.executable, "-m", "todo_cli.src.cli"]
-        
+
         if storage_file:
             cmd.extend(["--storage-file", storage_file])
-        
+
         cmd.extend(args)
-        
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True
         )
-        
+
         return {
             'stdout': result.stdout,
             'stderr': result.stderr,
             'returncode': result.returncode
         }
-    
+
     return run_command

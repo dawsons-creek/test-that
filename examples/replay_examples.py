@@ -5,8 +5,10 @@ Shows various usage patterns for time freezing and HTTP recording.
 """
 
 import datetime
+
 import requests
-from test_that import test, suite, that, replay
+
+from test_that import replay, suite, test, that
 
 
 # Basic time freezing
@@ -40,7 +42,7 @@ def test_combined_replay():
     current_time = datetime.datetime.now()
     expected_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
     that(current_time).equals(expected_time)
-    
+
     # HTTP should be recorded
     response = requests.post(
         "https://jsonplaceholder.typicode.com/users",
@@ -61,7 +63,7 @@ def test_time_context_manager():
         frozen_time = datetime.datetime.now()
         expected = datetime.datetime(2024, 6, 15, 18, 30, 0, tzinfo=datetime.timezone.utc)
         that(frozen_time).equals(expected)
-    
+
     # Time should be unfrozen outside the context
     # (We can't easily test this without mocking, but the concept is demonstrated)
 
@@ -72,16 +74,16 @@ def test_nested_contexts():
     """Test nested time contexts work correctly."""
     with replay.time("2024-01-01T12:00:00Z"):
         outer_time = datetime.datetime.now()
-        
+
         with replay.time("2024-12-31T23:59:59Z"):
             inner_time = datetime.datetime.now()
-        
+
         # Should return to outer context
         back_to_outer = datetime.datetime.now()
-    
+
     expected_outer = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
     expected_inner = datetime.datetime(2024, 12, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
-    
+
     that(outer_time).equals(expected_outer)
     that(inner_time).equals(expected_inner)
     that(back_to_outer).equals(expected_outer)
@@ -97,9 +99,9 @@ def test_context_with_http():
             current_time = datetime.datetime.now()
             response = requests.get("https://jsonplaceholder.typicode.com/posts/1")
             return current_time, response.json()
-        
+
         time_result, api_result = make_api_call()
-        
+
         expected_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
         that(time_result).equals(expected_time)
         that(api_result).contains("title")
@@ -115,7 +117,7 @@ with suite("User Management Tests"):
                 "email": "john@example.com"
             }
         }
-    
+
     # All tests in this context will use the same frozen time
     with replay.time("2024-01-01T12:00:00Z"):
         @test("create user")
@@ -124,23 +126,23 @@ with suite("User Management Tests"):
             """Test user creation with frozen time."""
             user_data = context["test_user"]
             current_time = datetime.datetime.now()
-            
+
             response = requests.post(
                 "https://jsonplaceholder.typicode.com/users",
                 json={**user_data, "created_at": current_time.isoformat()}
             )
-            
+
             that(response.status_code).equals(201)
             created_user = response.json()
             that(created_user).contains("id")
-        
+
         @test("get user")
         @replay.http("get_user")
         def test_get_user(context):
             """Test user retrieval with frozen time."""
             response = requests.get("https://jsonplaceholder.typicode.com/users/1")
             that(response.status_code).equals(200)
-            
+
             user = response.json()
             that(user).contains("name")
             that(user).contains("email")
@@ -171,7 +173,7 @@ def test_invalid_time_format():
     def create_invalid_time():
         with replay.time("not-a-valid-date"):
             pass
-    
+
     that(create_invalid_time).raises(RuntimeError)
 
 
@@ -181,7 +183,7 @@ def test_invalid_time_format():
 def test_timestamp_api():
     """Test API that includes timestamps in responses."""
     current_time = datetime.datetime.now()
-    
+
     # Make API call that might include server timestamp
     response = requests.post(
         "https://jsonplaceholder.typicode.com/posts",
@@ -191,7 +193,7 @@ def test_timestamp_api():
             "client_timestamp": current_time.isoformat()
         }
     )
-    
+
     that(response.status_code).equals(201)
     post_data = response.json()
     that(post_data).contains("id")
@@ -204,7 +206,7 @@ def test_timestamp_api():
 def test_batch_operations():
     """Test multiple API calls with consistent timestamps."""
     base_time = datetime.datetime.now()
-    
+
     # Simulate batch operations
     results = []
     for i in range(3):
@@ -217,7 +219,7 @@ def test_batch_operations():
             }
         )
         results.append(response.json())
-    
+
     # All posts should have been created with the same timestamp
     that(len(results)).equals(3)
     for i, result in enumerate(results):

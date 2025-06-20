@@ -7,7 +7,7 @@ Handles test registration, discovery, and execution.
 import asyncio
 import inspect
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 
 class TestResult:
@@ -204,7 +204,7 @@ def suite(name: str):
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False, include_tags: Set[str] = None, 
+    def __init__(self, verbose: bool = False, include_tags: Set[str] = None,
                  exclude_tags: Set[str] = None):
         self.verbose = verbose
         self.results: List[TestResult] = []
@@ -216,12 +216,12 @@ class TestRunner:
     ) -> TestResult:
         """Run a single test function (supports both sync and async)."""
         from .mocking import cleanup_mocks
-        
+
         start_time = time.perf_counter()
 
         try:
             args = _prepare_test_arguments(test_func, setup_result)
-            
+
             if asyncio.iscoroutinefunction(test_func):
                 _execute_async_test(test_func, args)
             else:
@@ -251,7 +251,7 @@ class TestRunner:
         """Run all registered tests."""
         from .tags import get_tag_registry
         tag_registry = get_tag_registry()
-        
+
         all_results = []
 
         # Run standalone tests
@@ -332,13 +332,13 @@ def _run_suite_tests(suite: TestSuite, setup_result: Any, runner) -> List[TestRe
     """Run all tests in the suite that pass tag filtering."""
     from .tags import get_tag_registry
     tag_registry = get_tag_registry()
-    
+
     results = []
     for test_name, test_func, _ in suite.tests:
         if tag_registry.should_run(test_func, runner.include_tags, runner.exclude_tags):
             result = runner.run_test(test_name, test_func, setup_result)
             results.append(result)
-    
+
     return results
 
 

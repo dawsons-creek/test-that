@@ -4,22 +4,22 @@ Simple mocking functionality for the That testing library.
 Encourages dependency injection and good testing practices.
 """
 
-from typing import Any, Callable, List, Optional, Union
 import functools
+from typing import Any, Callable, List, Optional, Union
 
 
 class MockCall:
     """Represents a single call to a mocked method."""
-    
+
     def __init__(self, args: tuple, kwargs: dict):
         self.args = args
         self.kwargs = kwargs
-    
+
     def __eq__(self, other):
         if isinstance(other, MockCall):
             return self.args == other.args and self.kwargs == other.kwargs
         return False
-    
+
     def __repr__(self):
         args_str = ", ".join(repr(arg) for arg in self.args)
         kwargs_str = ", ".join(f"{k}={repr(v)}" for k, v in self.kwargs.items())
@@ -29,8 +29,8 @@ class MockCall:
 
 class Mock:
     """A mock object that tracks calls and provides verification."""
-    
-    def __init__(self, name: str, return_value: Any = None, 
+
+    def __init__(self, name: str, return_value: Any = None,
                  side_effect: Union[List[Any], Exception, Callable] = None,
                  raises: Optional[Exception] = None):
         self.name = name
@@ -39,44 +39,44 @@ class Mock:
         self.raises = raises
         self.calls: List[MockCall] = []
         self._side_effect_iter = None
-        
+
         if isinstance(side_effect, list):
             self._side_effect_iter = iter(side_effect)
-    
+
     def __call__(self, *args, **kwargs):
         """Record the call and return configured value."""
         self.calls.append(MockCall(args, kwargs))
-        
+
         if self.raises:
             raise self.raises
-        
+
         if self._side_effect_iter:
             try:
                 return next(self._side_effect_iter)
             except StopIteration:
                 raise ValueError(f"Mock '{self.name}' exhausted side_effect values")
-        
+
         if callable(self.side_effect):
             return self.side_effect(*args, **kwargs)
-        
+
         return self.return_value
-    
+
     def assert_called_with(self, *args, **kwargs):
         """Assert the mock was called with specific arguments."""
         expected = MockCall(args, kwargs)
-        
+
         if not self.calls:
             raise AssertionError(f"Mock '{self.name}' was never called")
-        
+
         if expected not in self.calls:
             calls_str = "\n  ".join(str(call) for call in self.calls)
             raise AssertionError(
                 f"Mock '{self.name}' was not called with {expected}\n"
                 f"Actual calls:\n  {calls_str}"
             )
-        
+
         return self
-    
+
     def assert_not_called(self):
         """Assert the mock was never called."""
         if self.calls:
@@ -84,14 +84,14 @@ class Mock:
             raise AssertionError(
                 f"Mock '{self.name}' was called {len(self.calls)} time(s):\n  {calls_str}"
             )
-        
+
         return self
-    
+
     @property
     def call_count(self) -> int:
         """Number of times the mock was called."""
         return len(self.calls)
-    
+
     def assert_called_once(self):
         """Assert the mock was called exactly once."""
         if self.call_count != 1:
@@ -99,7 +99,7 @@ class Mock:
                 f"Mock '{self.name}' was called {self.call_count} time(s), expected 1"
             )
         return self
-    
+
     def assert_called_times(self, count: int):
         """Assert the mock was called exactly 'count' times."""
         if self.call_count != count:
@@ -107,22 +107,22 @@ class Mock:
                 f"Mock '{self.name}' was called {self.call_count} time(s), expected {count}"
             )
         return self
-    
+
     @property
     def last_call(self) -> Optional[MockCall]:
         """Get the arguments from the most recent call."""
         return self.calls[-1] if self.calls else None
-    
+
     @property
     def first_call(self) -> Optional[MockCall]:
         """Get the arguments from the first call."""
         return self.calls[0] if self.calls else None
-    
+
     def get_call(self, index: int) -> MockCall:
         """Get the arguments from a specific call by index."""
         if not self.calls:
             raise IndexError(f"Mock '{self.name}' has no calls")
-        
+
         try:
             return self.calls[index]
         except IndexError:
@@ -133,14 +133,14 @@ class Mock:
 
 class MockContext:
     """Context for tracking active mocks for cleanup."""
-    
+
     def __init__(self):
         self.active_mocks: List[tuple] = []
-    
+
     def add_mock(self, obj: Any, attr_name: str, original: Any):
         """Track a mock for later cleanup."""
         self.active_mocks.append((obj, attr_name, original))
-    
+
     def cleanup(self):
         """Restore all mocked attributes."""
         for obj, attr_name, original in self.active_mocks:
@@ -194,7 +194,7 @@ def mock(obj: Any, attr_name: str, *,
     """
     # Get original value for cleanup
     original = getattr(obj, attr_name, _DELETED)
-    
+
     # Create mock
     mock_obj = Mock(
         name=f"{obj.__class__.__name__}.{attr_name}",
@@ -202,13 +202,13 @@ def mock(obj: Any, attr_name: str, *,
         side_effect=side_effect,
         raises=raises
     )
-    
+
     # Replace attribute
     setattr(obj, attr_name, mock_obj)
-    
+
     # Track for cleanup
     _mock_context.add_mock(obj, attr_name, original)
-    
+
     return mock_obj
 
 
@@ -236,30 +236,30 @@ def mock_that(mock_obj: Mock):
         that(mock_that(api_mock).call_count).equals(1)
         that(mock_that(api_mock).last_call.args).contains('/users')
     """
-    
+
     class MockAssertions:
         def __init__(self, mock_obj: Mock):
             self._mock = mock_obj
-        
+
         @property
         def call_count(self) -> int:
             return self._mock.call_count
-        
+
         @property
         def calls(self) -> List[MockCall]:
             return self._mock.calls
-        
+
         @property
         def last_call(self) -> Optional[MockCall]:
             return self._mock.last_call
-        
+
         @property
         def first_call(self) -> Optional[MockCall]:
             return self._mock.first_call
-        
+
         def get_call(self, index: int) -> MockCall:
             return self._mock.get_call(index)
-    
+
     return MockAssertions(mock_obj)
 
 
@@ -272,5 +272,5 @@ def _wrap_test_for_mocking(test_func: Callable) -> Callable:
             return test_func(*args, **kwargs)
         finally:
             cleanup_mocks()
-    
+
     return wrapped

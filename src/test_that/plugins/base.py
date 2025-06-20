@@ -5,8 +5,8 @@ Provides the foundation for all plugin types with comprehensive metadata support
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Callable
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List
 
 
 @dataclass
@@ -26,21 +26,21 @@ class PluginInfo:
 
 class PluginBase(ABC):
     """Base class for all That plugins with lifecycle management."""
-    
+
     @property
     @abstractmethod
     def info(self) -> PluginInfo:
         """Return plugin metadata."""
         pass
-    
+
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
         pass
-    
+
     def cleanup(self) -> None:
         """Cleanup plugin resources."""
         pass
-    
+
     def validate_dependencies(self) -> List[str]:
         """Validate plugin dependencies and return missing ones."""
         missing = []
@@ -54,7 +54,7 @@ class PluginBase(ABC):
 
 class DecoratorPlugin(PluginBase):
     """Plugin that provides test decorators."""
-    
+
     @abstractmethod
     def get_decorators(self) -> Dict[str, Callable]:
         """Return dict of decorator_name -> decorator_function."""
@@ -63,7 +63,7 @@ class DecoratorPlugin(PluginBase):
 
 class AssertionPlugin(PluginBase):
     """Plugin that extends assertion capabilities."""
-    
+
     @abstractmethod
     def get_assertion_methods(self) -> Dict[str, Callable]:
         """Return dict of method_name -> method_function."""
@@ -72,52 +72,52 @@ class AssertionPlugin(PluginBase):
 
 class LifecyclePlugin(PluginBase):
     """Plugin that hooks into test lifecycle with async support."""
-    
+
     def before_test_run(self) -> None:
         """Called before all tests start."""
         pass
-    
+
     def after_test_run(self) -> None:
         """Called after all tests complete."""
         pass
-    
+
     def before_test(self, test_name: str) -> None:
         """Called before each individual test."""
         pass
-    
+
     def after_test(self, test_name: str, result: Any) -> None:
         """Called after each individual test."""
         pass
-    
+
     def before_suite(self, suite_name: str) -> None:
         """Called before each test suite."""
         pass
-    
+
     def after_suite(self, suite_name: str) -> None:
         """Called after each test suite."""
         pass
-    
+
     # Async variants for modern testing workflows
     async def before_test_run_async(self) -> None:
         """Async version of before_test_run."""
         pass
-    
+
     async def after_test_run_async(self) -> None:
         """Async version of after_test_run."""
         pass
-    
+
     async def before_test_async(self, test_name: str) -> None:
         """Async version of before_test."""
         pass
-    
+
     async def after_test_async(self, test_name: str, result: Any) -> None:
         """Async version of after_test."""
         pass
-    
+
     async def before_suite_async(self, suite_name: str) -> None:
         """Async version of before_suite."""
         pass
-    
+
     async def after_suite_async(self, suite_name: str) -> None:
         """Async version of after_suite."""
         pass

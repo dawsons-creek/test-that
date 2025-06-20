@@ -7,8 +7,9 @@ Handles formatting and display of test results.
 import os
 import sys
 from typing import Dict, List, Optional, Tuple
-from .runner import TestResult, TestRegistry
+
 from .assertions import AssertionError
+from .runner import TestRegistry, TestResult
 
 
 class Colors:
@@ -207,20 +208,20 @@ class TestFormatter:
             lines.append(f"{Colors.RED}{Colors.BOLD}FAILED{Colors.RESET}")
 
         return "\n".join(lines)
-    
+
     def _format_focused_results(self, results: List[TestResult], registry: TestRegistry) -> str:
         """Format results in focus mode - show only failures with context."""
         passed, failed = _separate_results(results)
-        
+
         output = []
         if passed:
             output.extend(_format_passed_summary(passed))
-        
+
         if failed:
             if passed:
                 output.append("")
             output.extend(_format_failed_details(failed, self))
-        
+
         output.append(self._format_summary(results))
         return "\n".join(output)
 
@@ -248,32 +249,32 @@ def _format_failed_details(failed: List[TestResult], formatter) -> List[str]:
     for result in failed:
         output.append(f"{Colors.RED}✗{Colors.RESET} {result.name}")
         output.append("")
-        
+
         if result.error:
             output.extend(_format_failure_context(result.error, formatter))
             output.append("")
-    
+
     return output
 
 
 def _format_failure_context(error: Exception, formatter) -> List[str]:
     """Format failure context including assertion and traceback."""
     output = []
-    
+
     # Show the assertion that failed
     if isinstance(error, AssertionError) and hasattr(error, 'message'):
         output.append(f"  {error.message}")
         output.append("")
-    
+
     # Show error details
     error_lines = formatter._format_error(error)
     output.extend(error_lines)
-    
+
     # Add context section
     output.append("")
     output.append("  Context:")
     output.extend(_extract_test_context(error))
-    
+
     return output
 
 
@@ -281,7 +282,7 @@ def _extract_test_context(error: Exception) -> List[str]:
     """Extract test context from traceback."""
     import traceback
     output = []
-    
+
     tb = traceback.extract_tb(error.__traceback__)
     for frame in tb:
         if "test_" in frame.filename:
@@ -292,7 +293,7 @@ def _extract_test_context(error: Exception) -> List[str]:
                     if not var.startswith('_'):
                         output.append(f"    {var} = {repr(value)}")
             break
-    
+
     return output
 
 

@@ -5,7 +5,7 @@ Provides a fluent interface for making assertions about values.
 """
 
 import re
-from typing import Any, Callable, Pattern, Type, Union, List
+from typing import Any, Callable, List, Optional, Pattern, Type, Union
 
 
 class AssertionError(Exception):
@@ -16,7 +16,7 @@ class AssertionError(Exception):
         message: str,
         expected: Any = None,
         actual: Any = None,
-        diff_lines: List[str] = None,
+        diff_lines: Optional[List[str]] = None,
     ):
         super().__init__(message)
         self.expected = expected
@@ -59,7 +59,7 @@ def _create_dict_diff(expected: dict, actual: dict, path: str = "") -> List[str]
 
     for key in sorted(all_keys):
         current_path = f"{path}.{key}" if path else key
-        
+
         if key in expected and key in actual:
             lines.extend(_process_common_key(key, expected, actual, current_path))
         elif key in expected:
@@ -77,7 +77,7 @@ def _process_common_key(key: str, expected: dict, actual: dict, path: str) -> Li
 
     if expected_val == actual_val:
         return [_format_matching_value(path, actual_val)]
-    
+
     # Handle nested dictionaries recursively
     if isinstance(expected_val, dict) and isinstance(actual_val, dict):
         return _create_dict_diff(expected_val, actual_val, path)
@@ -191,7 +191,7 @@ class ThatAssertion:
                 expected=None,
                 actual=self.value,
             )
-        
+
         if self.value != expected:
             diff_lines = create_intelligent_diff(expected, self.value)
             raise AssertionError(
@@ -584,16 +584,16 @@ class ThatAssertion:
     ) -> "ThatAssertion":
         """Assert that items in the collection are sorted by the given key."""
         items = _validate_iterable_for_sorting(self.value, self.expression, key_func)
-        
+
         if len(items) <= 1:
             return self
 
         get_key = _create_key_function(key_func)
         sorted_items = _sort_items_safely(items, get_key, reverse, self.expression, key_func)
-        
+
         if items != sorted_items:
             _raise_sorting_error(items, sorted_items, reverse, self.expression, key_func)
-        
+
         return self
 
 
@@ -638,7 +638,7 @@ def _raise_sorting_error(items: list, sorted_items: list, reverse: bool, express
     """Raise assertion error for unsorted items."""
     first_diff_index = _find_first_difference(items, sorted_items)
     direction = "descending" if reverse else "ascending"
-    
+
     raise AssertionError(
         f"{expression}.are_sorted_by({repr(key_func)})",
         expected=f"items sorted {direction}",

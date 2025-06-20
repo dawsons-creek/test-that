@@ -8,10 +8,11 @@ Includes security sanitization to prevent credential leakage.
 import base64
 import functools
 import json
-import yaml
 from pathlib import Path
 from typing import Any, Callable, Dict, List
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import yaml
 
 try:
     from .plugins.security import default_sanitizer
@@ -23,7 +24,7 @@ except ImportError:
 class HTTPRecorder:
     """Records and replays HTTP requests."""
 
-    def __init__(self, cassette_name: str, record_mode: str = "once", recordings_dir: str = "tests/recordings", 
+    def __init__(self, cassette_name: str, record_mode: str = "once", recordings_dir: str = "tests/recordings",
                  sanitize: bool = True):
         self.cassette_name = cassette_name
         self.record_mode = record_mode
@@ -41,10 +42,10 @@ class HTTPRecorder:
             return []
 
         try:
-            with open(self.cassette_path, "r") as f:
+            with open(self.cassette_path) as f:
                 data = yaml.safe_load(f) or {}
                 return data.get("interactions", [])
-        except (yaml.YAMLError, IOError, PermissionError) as e:
+        except (OSError, yaml.YAMLError, PermissionError) as e:
             raise RuntimeError(f"Failed to load cassette {self.cassette_path}: {e}") from e
 
     def _save_cassette(self):
@@ -54,7 +55,7 @@ class HTTPRecorder:
             data = {"interactions": self.interactions, "version": 1}
             with open(self.cassette_path, "w") as f:
                 yaml.dump(data, f, default_flow_style=False)
-        except (yaml.YAMLError, IOError, PermissionError) as e:
+        except (OSError, yaml.YAMLError, PermissionError) as e:
             raise RuntimeError(f"Failed to save cassette {self.cassette_path}: {e}") from e
 
     def _find_matching_interaction(
@@ -112,11 +113,11 @@ class HTTPRecorder:
                 "is_binary": is_binary,
             },
         }
-        
+
         # Apply sanitization if enabled
         if self.sanitize and default_sanitizer:
             interaction = default_sanitizer.sanitize_interaction(interaction)
-        
+
         self.interactions.append(interaction)
         self._save_cassette()
 
@@ -181,7 +182,7 @@ class HTTPRecorder:
                 raise Exception(f"No recorded interaction found for {method} {url}")
 
         return mock_request_func
-    
+
     def record_during(self, func: Callable) -> Callable:
         """
         Return a wrapped version of func that executes with HTTP recording.
@@ -219,7 +220,7 @@ class HTTPRecorder:
             except ImportError:
                 # requests not available, just run the test
                 return func(*args, **kwargs)
-        
+
         return wrapper
 
 

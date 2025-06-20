@@ -4,7 +4,7 @@ Example tests for the That testing library.
 Demonstrates the basic usage and features.
 """
 
-from test_that import test, suite, that
+from test_that import suite, test, that
 
 
 # Simple standalone tests
@@ -37,13 +37,13 @@ with suite("Collection Operations"):
         that(numbers).contains(3)
         that(numbers).does_not_contain(10)
         that(numbers).has_length(5)
-    
+
     @test("empty collections")
     def test_empty():
         that([]).is_empty()
         that("").is_empty()
         that({}).is_empty()
-    
+
     @test("dictionary operations")
     def test_dict():
         user = {"name": "John", "age": 30}
@@ -56,12 +56,12 @@ with suite("Number Comparisons"):
     def test_greater():
         that(10).is_greater_than(5)
         that(3.14).is_greater_than(3)
-    
+
     @test("less than")
     def test_less():
         that(5).is_less_than(10)
         that(2.5).is_less_than(3)
-    
+
     @test("between values")
     def test_between():
         that(5).is_between(1, 10)
@@ -74,7 +74,7 @@ with suite("Type Checking"):
         that("hello").is_instance_of(str)
         that([1, 2, 3]).is_instance_of(list)
         that(42).is_instance_of(int)
-    
+
     @test("exact type checks")
     def test_exact_types():
         that("hello").has_type(str)
@@ -87,14 +87,14 @@ with suite("Exception Handling"):
     def test_raises():
         def divide_by_zero():
             return 1 / 0
-        
+
         that(divide_by_zero).raises(ZeroDivisionError)
-    
+
     @test("function does not raise")
     def test_no_raise():
         def safe_function():
             return "safe"
-        
+
         result = that(safe_function).does_not_raise()
         that(result.value).equals("safe")
 
@@ -104,11 +104,11 @@ with suite("Database Tests"):
     def setup():
         """Create a mock database."""
         return {"users": [], "next_id": 1}
-    
+
     def teardown(db):
         """Clean up the database."""
         db.clear()
-    
+
     @test("can add user")
     def test_add_user(db):
         user = {"id": db["next_id"], "name": "John"}

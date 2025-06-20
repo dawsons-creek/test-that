@@ -10,8 +10,8 @@ import warnings
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
-from .time_freeze import TimeFreeze
 from .http_recording import HTTPRecorder
+from .time_freeze import TimeFreeze
 
 
 class ReplayConfig:
@@ -78,13 +78,14 @@ class TimeContextOrDecorator:
     def _create_and_start_patches(self, mock_values: dict):
         """Create and start all time-related patches."""
         from unittest.mock import patch
+
         from test_that.time_freeze import NANOSECONDS_PER_SECOND
 
         self._datetime_patch = patch("datetime.datetime")
         self._date_patch = patch("datetime.date")
         self._time_patch = patch("time.time", return_value=mock_values['timestamp'])
         self._time_ns_patch = patch(
-            "time.time_ns", 
+            "time.time_ns",
             return_value=int(mock_values['timestamp'] * NANOSECONDS_PER_SECOND)
         )
         self._gmtime_patch = patch("time.gmtime", return_value=mock_values['utcnow'].timetuple())
@@ -169,7 +170,7 @@ class Replay:
         self._context_time = None
         self._context_stack = []
         self.config = config or ReplayConfig()
-    
+
     def time(self, frozen_time: Union[str, Any]):
         """
         Freeze time during test execution.
@@ -193,7 +194,7 @@ class Replay:
         # Check if being used in a 'with' statement context by looking at the call stack
         # For simplicity, we'll return a special object that can be both decorator and context manager
         return TimeContextOrDecorator(self, frozen_time)
-    
+
     def http(self, cassette_name: str, mode: str = "once"):
         """
         Record/replay HTTP requests during test execution.
@@ -210,8 +211,8 @@ class Replay:
                 that(response.json()["name"]).equals("John Doe")
         """
         return self._http_decorator(cassette_name, mode)
-    
-    def __call__(self, time: Optional[Union[str, Any]] = None, 
+
+    def __call__(self, time: Optional[Union[str, Any]] = None,
                  http: Optional[str] = None, mode: str = "once"):
         """
         Combined time and HTTP control.
@@ -232,17 +233,17 @@ class Replay:
         def decorator(func: Callable) -> Callable:
             # Apply decorators in order (time first, then http)
             decorated_func = func
-            
+
             if time is not None:
                 decorated_func = self._time_decorator(time)(decorated_func)
-            
+
             if http is not None:
                 decorated_func = self._http_decorator(http, mode)(decorated_func)
-                
+
             return decorated_func
-        
+
         return decorator
-    
+
     def _time_decorator(self, frozen_time: Union[str, Any]):
         """Create time freezing decorator."""
         def decorator(func: Callable) -> Callable:
@@ -258,7 +259,7 @@ class Replay:
                     raise RuntimeError(f"Time freezing failed for {func.__name__}: {e}") from e
             return wrapper
         return decorator
-    
+
     def _http_decorator(self, cassette_name: str, mode: str = "once"):
         """Create HTTP recording decorator."""
         def decorator(func: Callable) -> Callable:
@@ -283,7 +284,7 @@ class Replay:
                     raise RuntimeError(f"HTTP recording failed for {func.__name__}: {e}") from e
             return wrapper
         return decorator
-    
+
 
 
 # Create singleton instance

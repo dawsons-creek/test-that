@@ -17,7 +17,7 @@ class TimeFreeze:
     """
     Core time freezing functionality that can be reused by different APIs.
     """
-    
+
     def __init__(self, frozen_time: Union[str, datetime.datetime]):
         """
         Initialize time freezer.
@@ -27,7 +27,7 @@ class TimeFreeze:
                         or a datetime object
         """
         self.frozen_time = self._parse_time(frozen_time)
-    
+
     def _parse_time(self, frozen_time: Union[str, datetime.datetime]) -> datetime.datetime:
         """Convert string to datetime if needed."""
         if isinstance(frozen_time, str):
@@ -43,7 +43,7 @@ class TimeFreeze:
             return frozen_time
         else:
             raise TypeError(f"Expected str or datetime, got {type(frozen_time)}")
-    
+
     def freeze_during(self, func: Callable) -> Callable:
         """
         Return a wrapped version of func that executes with frozen time.
@@ -57,7 +57,7 @@ class TimeFreeze:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             dt = self.frozen_time
-            
+
             # Create mock return values
             mock_now = dt
             # Fix timezone conversion logic
