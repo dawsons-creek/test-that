@@ -164,23 +164,79 @@ with suite("Payment Processing"):
 
 ### Advanced Testing Capabilities
 
+#### Time Control and Replay
 ```python
-from test_that import mock, replay
+from test_that import replay
 
-# Time control for deterministic testing
+# Freeze time for deterministic testing
 @replay.time("2024-01-15T10:00:00Z")
 @test("creates order with correct timestamp")
 def test_order_timestamp():
     order = create_order()
     that(order.created_at).equals(datetime(2024, 1, 15, 10, 0, 0))
+```
 
-# Intelligent mocking
+#### HTTP Request Recording and Replay
+```python
+from test_that import replay
+
+# Record HTTP interactions for reliable API testing
+@replay.http("user_api_calls.json")
+@test("fetches user profile from API")
+def test_user_api():
+    # First run: records real HTTP calls
+    # Subsequent runs: replays recorded responses
+    user = fetch_user_profile(user_id=123)
+    that(user.name).equals("John Doe")
+    that(user.email).contains("@example.com")
+
+# Test with sanitized recordings (removes sensitive data)
+@replay.http("sanitized_api.json", sanitize=True)
+@test("processes payment without exposing credentials")
+def test_payment_processing():
+    # API keys, tokens, and sensitive headers are automatically redacted
+    result = process_payment(amount=100.0, token="secret_token")
+    that(result.status).equals("success")
+```
+
+#### Intelligent Mocking
+```python
+from test_that import mock
+
 @test("handles API failures gracefully")
 def test_api_failure():
     with mock.patch('requests.get') as mock_get:
         mock_get.side_effect = ConnectionError("Network timeout")
         result = fetch_user_data(user_id=123)
         that(result.error).equals("Service temporarily unavailable")
+
+# Enhanced mock assertions
+@test("tracks API call patterns")
+def test_api_usage():
+    with mock.patch('api_client.get') as mock_api:
+        service = UserService()
+        service.get_user(123)
+        service.get_user(456)
+        
+        that(mock_api).was_called_times(2)
+        that(mock_api.calls[0]).has_args(123)
+        that(mock_api.calls[1]).has_args(456)
+```
+
+#### Plugin System
+```python
+# Custom assertion plugins
+from test_that.plugins import register_assertion
+
+@register_assertion
+def validates_email(that_obj, email):
+    """Custom assertion for email validation"""
+    if "@" not in email or "." not in email:
+        raise AssertionError(f"Invalid email format: {email}")
+    return that_obj
+
+# Usage
+that("user@example.com").validates_email()
 ```
 
 ## Precise Test Targeting
@@ -312,7 +368,7 @@ Test That is built on principles that scale from solo projects to enterprise tea
 - **Speed Matters**: Precise test targeting eliminates time wasted running irrelevant tests  
 - **Zero Friction**: Single import, zero configuration, immediate productivity
 - **Extensible Core**: Plugin system adapts to your specific testing needs
-- **Battle Tested**: Comprehensive plugin system with security, performance, and enterprise features
+- **Production Ready**: Designed with years of testing experience, built for modern development workflows
 
 ## Get Started Today
 
