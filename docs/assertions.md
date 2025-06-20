@@ -244,7 +244,7 @@ that(result.value).equals(5)
 
 ## Dictionary Assertions
 
-Dictionaries support all collection assertions plus:
+Dictionaries support all collection assertions plus specialized dictionary methods:
 
 ### `has_key(key)`
 Dictionary contains the given key.
@@ -252,6 +252,90 @@ Dictionary contains the given key.
 user = {"name": "Alice", "age": 30}
 that(user).has_key("name")
 that(user).has_key("age")
+```
+
+### `has_keys(*keys)`
+Dictionary contains all given keys.
+```python
+user = {"name": "Alice", "age": 30, "email": "alice@example.com"}
+that(user).has_keys("name", "age", "email")
+```
+
+### `has_value(key, expected_value)`
+Dictionary has key with specific value.
+```python
+user = {"name": "Alice", "age": 30}
+that(user).has_value("name", "Alice")
+that(user).has_value("age", 30)
+```
+
+### `has_path(path)`
+Nested path exists in the data structure using dot notation.
+```python
+data = {
+    "user": {
+        "name": "Alice",
+        "address": {
+            "city": "NYC",
+            "zip": "10001"
+        }
+    }
+}
+that(data).has_path("user.name")
+that(data).has_path("user.address.city")
+```
+
+### `path(path)`
+Get nested value by path and return new assertion for it.
+```python
+data = {
+    "user": {
+        "name": "Alice",
+        "items": [{"id": 1}, {"id": 2}]
+    }
+}
+that(data).path("user.name").equals("Alice")
+that(data).path("user.items[0].id").equals(1)
+that(data).path("user.items").has_length(2)
+```
+
+### `as_json()`
+Parse JSON string and return assertion for parsed data.
+```python
+json_str = '{"name": "Alice", "age": 30}'
+that(json_str).as_json().has_key("name")
+that(json_str).as_json().has_value("name", "Alice")
+
+# Chain with other assertions
+that(json_str).as_json().path("name").equals("Alice")
+```
+
+### `matches_schema(schema)`
+Validate data against JSON Schema.
+```python
+user = {"name": "Alice", "age": 30, "email": "alice@example.com"}
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer", "minimum": 0},
+        "email": {"type": "string", "pattern": r".+@.+\..+"}
+    },
+    "required": ["name", "email"]
+}
+that(user).matches_schema(schema)
+```
+
+### `has_structure(expected_structure)`
+Validate dictionary structure (keys and types).
+```python
+user = {"name": "Alice", "age": 30, "active": True}
+expected = {
+    "name": str,
+    "age": int,
+    "active": bool
+}
+that(user).has_structure(expected)
 ```
 
 ### Dictionary Value Access

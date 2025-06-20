@@ -8,7 +8,7 @@ import os
 import sys
 from typing import Dict, List, Optional, Tuple
 from .runner import TestResult, TestRegistry
-from .assertions import AssertionError
+from .assertions import ThatAssertionError
 
 
 class Colors:
@@ -129,7 +129,7 @@ class TestFormatter:
         """Format an error for display."""
         lines = []
 
-        if isinstance(error, AssertionError):
+        if isinstance(error, ThatAssertionError):
             # Format assertion errors with clear expected/actual
             lines.append(f"    {error.message}")
             lines.append("")
@@ -261,7 +261,7 @@ def _format_failure_context(error: Exception, formatter) -> List[str]:
     output = []
     
     # Show the assertion that failed
-    if isinstance(error, AssertionError) and hasattr(error, 'message'):
+    if isinstance(error, ThatAssertionError) and hasattr(error, 'message'):
         output.append(f"  {error.message}")
         output.append("")
     

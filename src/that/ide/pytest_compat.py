@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Generator
 
 from ..runner import get_registry, clear_registry, TestRunner
-from ..assertions import AssertionError as ThatAssertionError
+from ..assertions import ThatAssertionError
 from ..__main__ import load_test_file
 
 

@@ -7,6 +7,7 @@ A Python testing framework focused on clarity and simplicity.
 That provides:
 - Fluent assertions that read like English
 - Clear error messages showing exactly what failed
+- JSON and dictionary testing with nested path support
 - Built-in mocking, time control, and HTTP recording
 - Zero configuration - works out of the box
 
@@ -128,6 +129,33 @@ def test_user_timestamp():
     that(user.created_at).equals(expected)
 ```
 
+### JSON & Dictionary Testing
+
+```python
+from that import test, that
+
+@test("validates API response")
+def test_api_response():
+    response = '{"user": {"id": 123, "profile": {"name": "Alice"}}}'
+    
+    # Parse JSON and test nested values
+    parsed = that(response).as_json()
+    parsed.path("user.id").equals(123)
+    parsed.path("user.profile.name").equals("Alice")
+    
+    # Validate structure with schema
+    schema = {
+        "type": "object",
+        "properties": {
+            "user": {
+                "type": "object",
+                "required": ["id", "profile"]
+            }
+        }
+    }
+    parsed.matches_schema(schema)
+```
+
 ### HTTP Recording
 
 ```python
@@ -196,6 +224,16 @@ def test_signup():
 ### Types
 - `is_instance_of(type)` - Value is instance of type
 - `has_type(type)` - Value has exact type
+
+### Dictionaries
+- `has_key(key)` - Dictionary contains key
+- `has_keys(*keys)` - Dictionary contains all keys
+- `has_value(key, value)` - Dictionary has key with specific value
+- `has_path(path)` - Nested path exists (dot notation)
+- `path(path)` - Get nested value by path
+- `as_json()` - Parse JSON string
+- `matches_schema(schema)` - Validate against JSON Schema
+- `has_structure(structure)` - Validate dictionary structure
 
 ### Exceptions
 - `raises(exception_type)` - Function raises exception

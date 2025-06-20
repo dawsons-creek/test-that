@@ -143,6 +143,38 @@ def test_api_call():
     that(response.json()).has_key("name")
 ```
 
+### JSON & Dictionary Testing
+
+```python
+from that import test, that
+
+@test("validates API response structure")
+def test_api_response():
+    response_json = '{"user": {"id": 123, "profile": {"name": "Alice"}}}'
+    
+    # Parse JSON and validate structure
+    parsed = that(response_json).as_json()
+    parsed.has_keys("user")
+    parsed.path("user.id").equals(123)
+    parsed.path("user.profile.name").equals("Alice")
+    
+    # Validate with JSON schema
+    schema = {
+        "type": "object",
+        "properties": {
+            "user": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "profile": {"type": "object"}
+                },
+                "required": ["id", "profile"]
+            }
+        }
+    }
+    parsed.matches_schema(schema)
+```
+
 ## Assertions Reference
 
 ### Equality
@@ -166,6 +198,16 @@ def test_api_call():
 - `has_length(n)` - Collection has length n
 - `contains(item)` - Collection contains item
 - `all_satisfy(predicate)` - All items satisfy predicate
+
+### Dictionaries & JSON
+- `has_key(key)` - Dictionary contains key
+- `has_keys(*keys)` - Dictionary contains all keys
+- `has_value(key, value)` - Dictionary has key with specific value
+- `has_path(path)` - Nested path exists (dot notation)
+- `path(path)` - Get nested value as new assertion
+- `as_json()` - Parse JSON string and return assertion
+- `matches_schema(schema)` - Validate against JSON schema
+- `has_structure(expected)` - Validate dictionary structure
 
 ### Numbers
 - `is_greater_than(value)` - Number is greater than value
