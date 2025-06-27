@@ -7,16 +7,19 @@ the ThreadPoolExecutor workaround from the original implementation.
 
 import asyncio
 import inspect
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from .runner import TestResult, TestRunner
+
+if TYPE_CHECKING:
+    from .context import TestContext
 
 
 class AsyncTestRunner(TestRunner):
     """Test runner with improved async support."""
 
-    def __init__(self, verbose: bool = False):
-        super().__init__(verbose)
+    def __init__(self, verbose: bool = False, context: Optional['TestContext'] = None):
+        super().__init__(verbose, context)
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
     def _get_or_create_loop(self) -> asyncio.AbstractEventLoop:
@@ -69,8 +72,12 @@ class AsyncTestRunner(TestRunner):
         error = None
 
         try:
-            # Get fixtures
-            fixture_registry = get_fixture_registry()
+            # Get fixtures (use context if available)
+            if self.context:
+                fixture_registry = self.context.fixture_registry
+            else:
+                from .fixtures import get_fixture_registry
+                fixture_registry = get_fixture_registry()
             fixtures = fixture_registry.resolve_fixtures(test_func)
 
             # Setup function-scoped fixtures
@@ -128,10 +135,14 @@ class AsyncTestRunner(TestRunner):
     async def _run_suite_tests_async(self, registry) -> List[TestResult]:
         """Run suite tests sequentially."""
         all_results = []
-        from .fixtures import get_fixture_registry
         
         for _suite_name, suite in registry.suites.items():
-            fixture_registry = get_fixture_registry()
+            # Get fixtures (use context if available)
+            if self.context:
+                fixture_registry = self.context.fixture_registry
+            else:
+                from .fixtures import get_fixture_registry
+                fixture_registry = get_fixture_registry()
             fixture_registry.setup_suite_fixtures()
 
             for test_name, test_func, _ in suite.tests:

@@ -1,23 +1,26 @@
 """
 Fixture system for test-that testing framework.
 
-Provides dependency injection for test setup and teardown.
+Provides dependency injection for test setup and teardown with
+context isolation for parallel test execution.
 """
 
 import inspect
-from typing import Any, Callable, Dict, Generator, Optional, Set
+from typing import Any, Callable, Dict, Generator, Optional, Set, Literal
+
+Scope = Literal["function", "suite"]
 
 
 class Fixture:
     """Represents a test fixture with setup and optional teardown."""
     
-    def __init__(self, name: str, func: Callable, scope: str = "function"):
+    def __init__(self, name: str, func: Callable[..., Any], scope: Scope = "function"):
         self.name = name
         self.func = func
-        self.scope = scope  # "function" or "suite"
-        self.cached_value = None
+        self.scope: Scope = scope
+        self.cached_value: Optional[Any] = None
         self.is_cached = False
-        self._generator = None
+        self._generator: Optional[Generator] = None
         
     def get_value(self) -> Any:
         """Get the fixture value, handling generators for teardown."""
@@ -66,6 +69,10 @@ class FixtureRegistry:
         
     def register(self, name: str, func: Callable, scope: str = "function"):
         """Register a fixture."""
+        if name in self.fixtures:
+            raise ValueError(f"Fixture with name '{name}' already exists.")
+        if scope not in ("function", "suite"):
+            raise ValueError(f"Invalid fixture scope: '{scope}'. Must be 'function' or 'suite'.")
         self.fixtures[name] = Fixture(name, func, scope)
         
     def resolve_fixtures(self, func: Callable) -> Dict[str, Any]:
@@ -82,10 +89,10 @@ class FixtureRegistry:
     def _get_fixture_value(self, name: str) -> Any:
         """Get a fixture value, resolving dependencies."""
         if name not in self.fixtures:
-            raise ValueError(f"Unknown fixture: {name}")
+            raise ValueError(f"Unknown fixture: '{name}'. Available fixtures: {list(self.fixtures.keys())}")
             
         if name in self._active_fixtures:
-            raise ValueError(f"Circular dependency detected: {name}")
+            raise ValueError(f"Circular dependency detected: {' -> '.join(list(self._active_fixtures) + [name])}")
             
         fixture = self.fixtures[name]
         
@@ -148,16 +155,17 @@ class FixtureRegistry:
         self._active_fixtures.clear()
 
 
-# Global fixture registry
-_fixture_registry = FixtureRegistry()
+# Legacy global fixture registry (for backwards compatibility)
+_legacy_fixture_registry = FixtureRegistry()
 
 
-def fixture(scope: str = "function"):
+def fixture(scope: Scope = "function", *, context_aware: bool = True):
     """
     Decorator to register a test fixture.
     
     Args:
         scope: "function" (default) or "suite"
+        context_aware: If True, uses current context for isolation (default: True)
     
     Usage:
         @fixture()
@@ -169,15 +177,69 @@ def fixture(scope: str = "function"):
         @fixture(scope="suite")
         def shared_resource():
             return expensive_setup()
+
+        @test("uses database")
+        def test_with_db(database):
+            that(database.is_connected()).is_true()
+            
+        # For legacy compatibility (uses global registry)
+        @fixture(context_aware=False)
+        def legacy_fixture():
+            return "legacy"
     """
-    def decorator(func: Callable):
+    def decorator(func: Callable[..., Any]):
         name = func.__name__
-        _fixture_registry.register(name, func, scope)
+        
+        if context_aware:
+            # Use current context (thread/async safe) - import here to avoid circular imports
+            from .context import get_current_context
+            registry = get_current_context().fixture_registry
+        else:
+            # Use legacy global registry
+            registry = _legacy_fixture_registry
+            
+        registry.register(name, func, scope)
         return func
     
     return decorator
 
 
-def get_fixture_registry() -> FixtureRegistry:
-    """Get the global fixture registry."""
-    return _fixture_registry
+def get_fixture_registry(*, context_aware: bool = True) -> FixtureRegistry:
+    """Get the fixture registry.
+    
+    Args:
+        context_aware: If True, uses current context registry (default: True)
+                      If False, uses legacy global registry
+    """
+    if context_aware:
+        from .context import get_current_context
+        return get_current_context().fixture_registry
+    else:
+        return _legacy_fixture_registry
+
+
+def get_legacy_fixture_registry() -> FixtureRegistry:
+    """Get the legacy global fixture registry (backwards compatibility)."""
+    return _legacy_fixture_registry
+
+
+def clear_fixture_registry(*, context_aware: bool = True):
+    """Clear the fixture registry.
+    
+    Args:
+        context_aware: If True, clears current context registry (default: True)
+                      If False, clears legacy global registry
+    """
+    if context_aware:
+        from .context import get_current_context
+        get_current_context().fixture_registry.clear()
+    else:
+        _legacy_fixture_registry.clear()
+
+
+def clear_all_fixture_registries():
+    """Clear all fixture registries (useful for testing)."""
+    from .context import get_current_context, get_default_context
+    _legacy_fixture_registry.clear()
+    get_current_context().fixture_registry.clear()
+    get_default_context().fixture_registry.clear()

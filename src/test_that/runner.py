@@ -7,8 +7,12 @@ Handles test registration, discovery, and execution.
 import asyncio
 import inspect
 import time
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 from .fixtures import get_fixture_registry
+from .source_inspection import get_line_info_with_explicit
+
+if TYPE_CHECKING:
+    from .context import TestContext
 
 
 class TestResult:
@@ -136,14 +140,8 @@ def test(description: str):
         # Store description on function for parametrize decorator
         func._test_description = description
         
-        # Get the line number where the decorator was applied
-        frame = inspect.currentframe()
-        if frame and frame.f_back:
-            line_number = frame.f_back.f_lineno
-            file_path = frame.f_back.f_code.co_filename
-        else:
-            line_number = 0
-            file_path = "<unknown>"
+        # Get the line number using robust source inspection
+        line_number, file_path = get_line_info_with_explicit(func)
 
         # Check if this is a method (has __qualname__ with '.')
         # If so, don't register it yet - wait for the suite decorator
@@ -244,16 +242,21 @@ def _remove_class_tests_from_registry(cls):
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, context: Optional['TestContext'] = None):
         self.verbose = verbose
         self.results: List[TestResult] = []
+        self.context = context  # Optional context for isolation
 
     def run_test(self, test_name: str, test_func: Callable) -> TestResult:
         """Run a single test function with fixture injection."""
         from .mocking import cleanup_mocks
 
         start_time = time.perf_counter()
-        fixture_registry = get_fixture_registry()
+        # Get fixtures for this test (use context if available)
+        if self.context:
+            fixture_registry = self.context.fixture_registry
+        else:
+            fixture_registry = get_fixture_registry()
 
         try:
             # Resolve fixtures for this test - use original function if parametrized
@@ -285,7 +288,10 @@ class TestRunner:
             results.append(result)
         
         # Cleanup suite-scoped fixtures after all tests in suite
-        fixture_registry = get_fixture_registry()
+        if self.context:
+            fixture_registry = self.context.fixture_registry
+        else:
+            fixture_registry = get_fixture_registry()
         fixture_registry.teardown_suite_fixtures()
 
         return results
