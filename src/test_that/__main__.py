@@ -12,6 +12,7 @@ from typing import List, Optional, Set, Tuple
 
 from .output import TestFormatter
 from .runner import TestRunner, clear_registry, get_registry
+from .discovery import TestDiscovery
 
 
 def discover_test_files(
@@ -218,9 +219,14 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--focus", action="store_true",
         help="Focus mode - show only failures with full context"
     )
+    
+    parser.add_argument(
+        "--discover-only", action="store_true",
+        help="Only discover tests without running them (two-phase discovery)"
+    )
 
     # Plugin management subcommand
-    subparsers = parser.add_subparsers(dest='subcommand', help='Additional commands')
+    subparsers = parser.add_subparsers(dest='subcommand', help='Additional commands', required=False)
     plugin_parser = subparsers.add_parser('plugins', help='Manage plugins')
     plugin_parser.add_argument('plugin_args', nargs='*', help='Plugin command arguments')
 
@@ -463,7 +469,7 @@ def main():
     args = parser.parse_args()
 
     # Handle plugin subcommands
-    if hasattr(args, 'subcommand') and args.subcommand:
+    if hasattr(args, 'subcommand') and args.subcommand is not None:
         if args.subcommand == 'plugins':
             from .plugins.cli import main as plugin_cli_main
             return plugin_cli_main(args.plugin_args)
@@ -492,6 +498,16 @@ def main():
 
     specific_test, line_filters = parse_file_arguments(args)
     test_files = discover_test_files_from_args(args, config)
+    
+    # Handle two-phase discovery if requested
+    if args.discover_only:
+        discovery = TestDiscovery()
+        for file_path in test_files:
+            discovery.discover_file(file_path)
+        discovery.print_summary()
+        return 0
+    
+    # Normal execution - load and run tests
     load_all_test_files(test_files)
 
     filtered_tests, all_tests, registry = apply_test_filters(

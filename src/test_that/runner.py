@@ -8,6 +8,7 @@ import asyncio
 import inspect
 import time
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from .fixtures import get_fixture_registry
 
 
 class TestResult:
@@ -36,21 +37,10 @@ class TestSuite:
     def __init__(self, name: str):
         self.name = name
         self.tests: List[Tuple[str, Callable, int]] = []  # Added line number
-        self.setup_func: Optional[Callable] = None
-        self.teardown_func: Optional[Callable] = None
-        self.setup_result: Any = None
 
     def add_test(self, name: str, func: Callable, line_number: int):
         """Add a test to this suite with its line number."""
         self.tests.append((name, func, line_number))
-
-    def set_setup(self, func: Callable):
-        """Set the setup function for this suite."""
-        self.setup_func = func
-
-    def set_teardown(self, func: Callable):
-        """Set the teardown function for this suite."""
-        self.teardown_func = func
 
 
 class TestRegistry:
@@ -143,6 +133,9 @@ def test(description: str):
     """Decorator to register a test function."""
 
     def decorator(func: Callable):
+        # Store description on function for parametrize decorator
+        func._test_description = description
+        
         # Get the line number where the decorator was applied
         frame = inspect.currentframe()
         if frame and frame.f_back:
@@ -152,53 +145,134 @@ def test(description: str):
             line_number = 0
             file_path = "<unknown>"
 
-        _registry.add_test(description, func, line_number, file_path)
+        # Check if this is a method (has __qualname__ with '.')
+        # If so, don't register it yet - wait for the suite decorator
+        if hasattr(func, '__qualname__') and '.' in func.__qualname__:
+            # This is a method, store the registration info but don't register yet
+            func._test_line = line_number
+            func._test_file = file_path
+        else:
+            # This is a regular function, register immediately
+            _registry.add_test(description, func, line_number, file_path)
+        
         return func
 
     return decorator
 
 
 class SuiteContext:
-    """Context manager for test suites that captures setup/teardown functions."""
+    """Context manager for test suites."""
 
     def __init__(self, name: str):
         self.name = name
         self.suite = None
         self.old_suite = None
-        self.frame = None
-        self.original_locals = None
 
     def __enter__(self):
         self.suite = _registry.create_suite(self.name)
         self.old_suite = _registry.current_suite
         _registry.set_current_suite(self.suite)
-
-        # Capture the calling frame to monitor for setup/teardown functions
-        self.frame = inspect.currentframe().f_back
-        self.original_locals = set(self.frame.f_locals.keys())
-
         return self.suite
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            # Check for new functions that were defined in the suite block
-            current_locals = self.frame.f_locals
-            new_names = set(current_locals.keys()) - self.original_locals
-
-            for name in new_names:
-                value = current_locals[name]
-                if callable(value):
-                    if name == "setup":
-                        self.suite.set_setup(value)
-                    elif name == "teardown":
-                        self.suite.set_teardown(value)
-        finally:
-            _registry.set_current_suite(self.old_suite)
+        _registry.set_current_suite(self.old_suite)
 
 
-def suite(name: str):
-    """Context manager to group tests into a suite."""
-    return SuiteContext(name)
+def suite(name_or_class=None, *, name=None):
+    """
+    Create a test suite either as decorator or context manager.
+    
+    Usage as decorator:
+        @suite
+        class MathTests:
+            @test("addition works")
+            def test_add(self):
+                that(2 + 2).equals(4)
+                
+        # Or with custom name:
+        @suite(name="Math Operations")
+        class MathTests:
+            @test("addition works") 
+            def test_add(self):
+                that(2 + 2).equals(4)
+                
+    Usage as context manager:
+        with suite("Math Operations"):
+            @test("addition works")
+            def test_add():
+                that(2 + 2).equals(4)
+    """
+    if name_or_class is None:
+        # Called as @suite() or @suite(name="...")
+        def decorator(cls):
+            suite_name = name if name else cls.__name__
+            return _create_class_suite(cls, suite_name)
+        return decorator
+    elif isinstance(name_or_class, str):
+        # Called as suite("name") for context manager
+        return SuiteContext(name_or_class)
+    else:
+        # Called as @suite without parentheses
+        return _create_class_suite(name_or_class, name_or_class.__name__)
+
+
+def _create_class_suite(cls, suite_name: str):
+    """Create a suite from a test class."""
+    # First, remove any tests that were already registered for this class
+    _remove_class_tests_from_registry(cls)
+    
+    # Create suite
+    suite_obj = _registry.create_suite(suite_name)
+    
+    # Process all methods in the class that are decorated with @test
+    for attr_name in dir(cls):
+        attr_value = getattr(cls, attr_name)
+        if callable(attr_value) and hasattr(attr_value, '_test_description'):
+            # This is a test method - convert to standalone function
+            test_description = attr_value._test_description
+            
+            # Create a wrapper that handles instance creation
+            # Use a closure to capture the method
+            def create_test_wrapper(method):
+                def test_wrapper(**fixtures):
+                    # Create class instance
+                    instance = cls()
+                    
+                    # Check if method needs fixtures
+                    sig = inspect.signature(method)
+                    params = list(sig.parameters.keys())
+                    
+                    # Skip 'self' parameter and call with remaining fixtures
+                    if params and params[0] == 'self':
+                        filtered_fixtures = {k: v for k, v in fixtures.items() 
+                                           if k in params[1:]}  # Skip 'self'
+                        return method(instance, **filtered_fixtures)
+                    else:
+                        return method(**fixtures)
+                
+                # Preserve original function for fixture resolution
+                test_wrapper._original_func = method
+                return test_wrapper
+            
+            wrapped_test = create_test_wrapper(attr_value)
+            
+            # Get line number from the method
+            line_number = getattr(attr_value, '_test_line', 
+                                getattr(attr_value, '__code__', type('', (), {'co_firstlineno': 0})).co_firstlineno)
+            
+            # Add to suite
+            suite_obj.add_test(test_description, wrapped_test, line_number)
+    
+    return cls
+
+
+def _remove_class_tests_from_registry(cls):
+    """Remove any tests from a class that were already registered."""
+    # Remove standalone tests that belong to this class
+    _registry.standalone_tests = [
+        (name, func, line) for name, func, line in _registry.standalone_tests
+        if not (hasattr(func, '__self__') and isinstance(func.__self__, cls))
+    ]
 
 
 class TestRunner:
@@ -208,21 +282,22 @@ class TestRunner:
         self.verbose = verbose
         self.results: List[TestResult] = []
 
-    def run_test(
-        self, test_name: str, test_func: Callable, setup_result: Any = None
-    ) -> TestResult:
-        """Run a single test function (supports both sync and async)."""
+    def run_test(self, test_name: str, test_func: Callable) -> TestResult:
+        """Run a single test function with fixture injection."""
         from .mocking import cleanup_mocks
 
         start_time = time.perf_counter()
+        fixture_registry = get_fixture_registry()
 
         try:
-            args = _prepare_test_arguments(test_func, setup_result)
+            # Resolve fixtures for this test - use original function if parametrized
+            func_for_fixtures = getattr(test_func, '_original_func', test_func)
+            fixtures = fixture_registry.resolve_fixtures(func_for_fixtures)
 
             if asyncio.iscoroutinefunction(test_func):
-                _execute_async_test(test_func, args)
+                _execute_async_test(test_func, fixtures)
             else:
-                test_func(*args)
+                test_func(**fixtures)
 
             duration = time.perf_counter() - start_time
             return TestResult(test_name, True, duration=duration)
@@ -231,16 +306,21 @@ class TestRunner:
             duration = time.perf_counter() - start_time
             return TestResult(test_name, False, error=e, duration=duration)
         finally:
+            # Cleanup function-scoped fixtures after each test
+            fixture_registry.teardown_function_fixtures()
             cleanup_mocks()
 
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""
-        setup_result = _run_suite_setup(suite)
-        if setup_result is False:
-            return _create_setup_failure_results(suite)
-
-        results = _run_suite_tests(suite, setup_result, self)
-        _run_suite_teardown(suite, setup_result, self.verbose)
+        results = []
+        
+        for test_name, test_func, _ in suite.tests:
+            result = self.run_test(test_name, test_func)
+            results.append(result)
+        
+        # Cleanup suite-scoped fixtures after all tests in suite
+        fixture_registry = get_fixture_registry()
+        fixture_registry.teardown_suite_fixtures()
 
         return results
 
@@ -271,82 +351,16 @@ class TestRunner:
         return total, passed, failed, total_time
 
 
-def _prepare_test_arguments(test_func: Callable, setup_result: Any) -> tuple:
-    """Prepare arguments for test function based on signature."""
-    sig = inspect.signature(test_func)
-    params = list(sig.parameters.values())
-
-    if len(params) > 0 and setup_result is not None:
-        return (setup_result,)
-    else:
-        return ()
-
-
-def _execute_async_test(test_func: Callable, args: tuple):
-    """Execute async test function with proper event loop handling."""
-    try:
-        # Try to get existing event loop
-        asyncio.get_running_loop()
-        # We're already in an async context, run in thread
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(asyncio.run, test_func(*args))
-            future.result()
-    except RuntimeError:
-        # No event loop running, create one
-        asyncio.run(test_func(*args))
-
-
-def _run_suite_setup(suite: TestSuite) -> Any:
-    """Run suite setup and return result or False if failed."""
-    if not suite.setup_func:
-        return None
-
-    try:
-        setup_result = suite.setup_func()
-        suite.setup_result = setup_result
-        return setup_result
-    except Exception:
-        return False
-
-
-def _create_setup_failure_results(suite: TestSuite) -> List[TestResult]:
-    """Create failure results for all tests when setup fails."""
-    results = []
-    for test_name, _, _ in suite.tests:
-        results.append(
-            TestResult(test_name, False, error=Exception("Setup failed"))
-        )
-    return results
-
-
-def _run_suite_tests(suite: TestSuite, setup_result: Any, runner) -> List[TestResult]:
-    """Run all tests in the suite."""
-    results = []
-    for test_name, test_func, _ in suite.tests:
-        result = runner.run_test(test_name, test_func, setup_result)
-        results.append(result)
-
-    return results
-
-
-def _run_suite_teardown(suite: TestSuite, setup_result: Any, verbose: bool):
-    """Run suite teardown with proper error handling."""
-    if not suite.teardown_func:
-        return
-
-    try:
-        if setup_result is not None:
-            sig = inspect.signature(suite.teardown_func)
-            if len(sig.parameters) > 0:
-                suite.teardown_func(setup_result)
-            else:
-                suite.teardown_func()
-        else:
-            suite.teardown_func()
-    except Exception as e:
-        if verbose:
-            print(f"Warning: Teardown failed: {e}")
+def _execute_async_test(test_func: Callable, fixtures: Dict[str, Any]):
+    """Execute async test function with proper event loop handling.
+    
+    This is a simplified version that handles the common case where tests
+    are run from a synchronous context. For more advanced async handling,
+    use AsyncTestRunner from async_runner module.
+    """
+    # Always create a new event loop for test isolation
+    # This avoids issues with nested loops and ensures clean state
+    asyncio.run(test_func(**fixtures))
 
 
 

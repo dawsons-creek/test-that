@@ -20,17 +20,21 @@ except ImportError:
     # Fallback if plugins not available
     default_sanitizer = None
 
+from .http_adapters import get_adapter
+
 
 class HTTPRecorder:
     """Records and replays HTTP requests."""
 
     def __init__(self, cassette_name: str, record_mode: str = "once", recordings_dir: str = "tests/recordings",
-                 sanitize: bool = True):
+                 sanitize: bool = True, http_client: str = "requests"):
         self.cassette_name = cassette_name
         self.record_mode = record_mode
         self.cassette_path = Path(recordings_dir) / f"{cassette_name}.yaml"
         self.interactions = []
         self.sanitize = sanitize and default_sanitizer is not None
+        self.http_client = http_client
+        self.adapter = get_adapter(http_client)
 
     def _ensure_cassette_dir(self):
         """Ensure the cassettes directory exists."""
@@ -123,33 +127,7 @@ class HTTPRecorder:
 
     def _create_mock_response(self, interaction: Dict):
         """Create a mock response from a recorded interaction."""
-        response_data = interaction["response"]
-        mock_response = MagicMock()
-        mock_response.status_code = response_data["status"]
-        mock_response.headers = response_data["headers"]
-
-        # Handle binary vs text content
-        if response_data.get("is_binary", False):
-            mock_response.content = base64.b64decode(response_data["body"])
-            mock_response.text = response_data["body"]  # Keep base64 for text access
-        else:
-            mock_response.text = response_data["body"]
-            mock_response.content = response_data["body"].encode("utf-8")
-
-        # Handle JSON responses
-        try:
-            if not response_data.get("is_binary", False):
-                mock_response.json.return_value = json.loads(response_data["body"])
-            else:
-                mock_response.json.side_effect = ValueError(
-                    "No JSON object could be decoded"
-                )
-        except (json.JSONDecodeError, TypeError):
-            mock_response.json.side_effect = ValueError(
-                "No JSON object could be decoded"
-            )
-
-        return mock_response
+        return self.adapter.create_mock_response(interaction["response"])
 
     def _mock_request(self, original_request):
         """Create a mock request function."""
@@ -198,30 +176,100 @@ class HTTPRecorder:
             # Load existing cassette
             self.interactions = self._load_cassette()
 
-            # Patch requests library
+            # Get patch targets from adapter
+            patch_targets = self.adapter.get_patch_targets()
+            
+            # Import the HTTP client module dynamically
             try:
-                import requests
-
-                original_request = requests.request
-                mock_request = self._mock_request(original_request)
-
-                with patch("requests.request", mock_request), patch(
-                    "requests.get", lambda url, **kw: mock_request("GET", url, **kw)
-                ), patch(
-                    "requests.post", lambda url, **kw: mock_request("POST", url, **kw)
-                ), patch(
-                    "requests.put", lambda url, **kw: mock_request("PUT", url, **kw)
-                ), patch(
-                    "requests.delete",
-                    lambda url, **kw: mock_request("DELETE", url, **kw),
-                ):
-
+                client_module = __import__(self.http_client)
+                
+                # Get the original request function
+                original_request = None
+                for attr_path in patch_targets.values():
+                    parts = attr_path.split('.')
+                    obj = client_module
+                    for part in parts[1:]:
+                        obj = getattr(obj, part, None)
+                        if obj is None:
+                            break
+                    if obj and callable(obj) and 'request' in attr_path:
+                        original_request = obj
+                        break
+                
+                if not original_request:
+                    # Fallback: just run the test without recording
                     return func(*args, **kwargs)
+                
+                mock_request = self._mock_request(original_request)
+                
+                # Create patches for all targets
+                patches = []
+                for target_name, target_path in patch_targets.items():
+                    if 'request' in target_name:
+                        patches.append(patch(target_path, mock_request))
+                    elif 'get' in target_name:
+                        patches.append(patch(target_path, lambda url, **kw: mock_request("GET", url, **kw)))
+                    elif 'post' in target_name:
+                        patches.append(patch(target_path, lambda url, **kw: mock_request("POST", url, **kw)))
+                    elif 'put' in target_name:
+                        patches.append(patch(target_path, lambda url, **kw: mock_request("PUT", url, **kw)))
+                    elif 'delete' in target_name:
+                        patches.append(patch(target_path, lambda url, **kw: mock_request("DELETE", url, **kw)))
+                
+                # Apply all patches
+                for p in patches:
+                    p.__enter__()
+                
+                try:
+                    return func(*args, **kwargs)
+                finally:
+                    # Clean up patches
+                    for p in reversed(patches):
+                        p.__exit__(None, None, None)
+                        
             except ImportError:
-                # requests not available, just run the test
+                # HTTP client not available, just run the test
                 return func(*args, **kwargs)
 
         return wrapper
 
+
+def http_record(cassette_name: str, *, record_mode: str = "once", 
+                recordings_dir: str = "tests/recordings", sanitize: bool = True,
+                http_client: str = "requests"):
+    """
+    Convenience decorator for HTTP recording.
+    
+    Args:
+        cassette_name: Name for the cassette file
+        record_mode: Recording mode (once, record, replay_only)
+        recordings_dir: Directory to store recordings
+        sanitize: Whether to sanitize sensitive data
+        http_client: HTTP client library to use (requests, httpx, aiohttp)
+        
+    Example:
+        @test("API call works")
+        @http_record("api_test")
+        def test_api():
+            response = requests.get("https://api.example.com/data")
+            that(response.status_code).equals(200)
+            
+        # With httpx
+        @test("HTTPX API call")
+        @http_record("httpx_test", http_client="httpx")
+        def test_httpx_api():
+            response = httpx.get("https://api.example.com/data")
+            that(response.status_code).equals(200)
+    """
+    def decorator(func):
+        recorder = HTTPRecorder(
+            cassette_name, 
+            record_mode=record_mode,
+            recordings_dir=recordings_dir,
+            sanitize=sanitize,
+            http_client=http_client
+        )
+        return recorder.record_during(func)
+    return decorator
 
 
