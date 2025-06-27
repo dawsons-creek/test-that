@@ -13,9 +13,11 @@ Usage:
 """
 
 from .assertions import that
+from .fixtures import fixture
 from .mocking import mock, mock_that
+from .parametrize import parametrize
 from .replay import replay
 from .runner import suite, test
 
 __version__ = "0.2.0"
-__all__ = ["test", "suite", "that", "replay", "mock", "mock_that"]
+__all__ = ["test", "suite", "that", "fixture", "parametrize", "replay", "mock", "mock_that"]
