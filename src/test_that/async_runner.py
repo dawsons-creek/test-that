@@ -104,79 +104,90 @@ class AsyncTestRunner(TestRunner):
         """Run all tests asynchronously."""
         from .runner import get_registry
 
-        all_results = []
         _registry = get_registry()
+        
+        standalone_results = await self._run_standalone_tests_async(_registry)
+        suite_results = await self._run_suite_tests_async(_registry)
 
-        # Create tasks for all standalone tests
-        tasks = []
-        for test_name, test_func, _ in _registry.standalone_tests:
-            task = self.run_test_async(test_name, test_func)
-            tasks.append(task)
+        self.results = standalone_results + suite_results
+        return self.results
 
-        # Run standalone tests concurrently
-        if tasks:
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
-                if isinstance(result, TestResult):
-                    all_results.append(result)
-                elif isinstance(result, Exception):
-                    # Handle unexpected errors
-                    all_results.append(
-                        TestResult(
-                            test_name="Unknown",
-                            passed=False,
-                            error=result,
-                            duration=0.0
-                        )
-                    )
+    async def _run_standalone_tests_async(self, registry) -> List[TestResult]:
+        """Run standalone tests concurrently."""
+        tasks = [
+            self.run_test_async(name, func)
+            for name, func, _ in registry.standalone_tests
+        ]
+        
+        if not tasks:
+            return []
 
-        # Run suite tests (sequentially for now to maintain suite coherence)
-        for _suite_name, suite in _registry.suites.items():
-            # Setup suite fixtures
-            from .fixtures import get_fixture_registry
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [self._handle_result(r) for r in results]
+
+    async def _run_suite_tests_async(self, registry) -> List[TestResult]:
+        """Run suite tests sequentially."""
+        all_results = []
+        from .fixtures import get_fixture_registry
+        
+        for _suite_name, suite in registry.suites.items():
             fixture_registry = get_fixture_registry()
             fixture_registry.setup_suite_fixtures()
 
-            # Run tests in suite
             for test_name, test_func, _ in suite.tests:
                 result = await self.run_test_async(test_name, test_func)
                 all_results.append(result)
 
-            # Cleanup suite fixtures
             fixture_registry.teardown_suite_fixtures()
-
-        self.results = all_results
+            
         return all_results
+
+    def _handle_result(self, result: Any) -> TestResult:
+        """Handle results from asyncio.gather, converting exceptions to TestResult."""
+        if isinstance(result, TestResult):
+            return result
+        elif isinstance(result, Exception):
+            return TestResult(
+                test_name="Unknown",
+                passed=False,
+                error=result,
+                duration=0.0
+            )
+        return TestResult(
+            test_name="Unknown",
+            passed=False,
+            error=TypeError(f"Unexpected result type: {type(result)}"),
+            duration=0.0
+        )
 
     def run_all(self) -> List[TestResult]:
         """Run all tests, handling async tests properly."""
-        # Check if any tests are async
+        if self._has_async_tests():
+            return self._run_all_with_async()
+        else:
+            return super().run_all()
+
+    def _has_async_tests(self) -> bool:
+        """Check if there are any asynchronous tests registered."""
         from .runner import get_registry
         _registry = get_registry()
 
-        has_async = any(
-            inspect.iscoroutinefunction(test_func)
-            for _, test_func, _ in _registry.standalone_tests
-        )
+        if any(inspect.iscoroutinefunction(f) for _, f, _ in _registry.standalone_tests):
+            return True
 
-        if not has_async:
-            # Check suites too
-            for _, suite in _registry.suites.items():
-                if any(inspect.iscoroutinefunction(test_func)
-                       for _, test_func, _ in suite.tests):
-                    has_async = True
-                    break
+        for suite in _registry.suites.values():
+            if any(inspect.iscoroutinefunction(f) for _, f, _ in suite.tests):
+                return True
 
-        if has_async:
-            # Use async execution
-            loop = self._get_or_create_loop()
-            if loop.is_running():
-                raise RuntimeError(
-                    "Cannot run async tests from within an existing event loop. "
-                    "Use run_all_async() or run tests from outside async context."
-                )
-            return loop.run_until_complete(self.run_all_async())
-        else:
-            # All tests are sync, use parent implementation
-            return super().run_all()
+        return False
+
+    def _run_all_with_async(self) -> List[TestResult]:
+        """Run all tests using an async event loop."""
+        loop = self._get_or_create_loop()
+        if loop.is_running():
+            raise RuntimeError(
+                "Cannot run async tests from within an existing event loop. "
+                "Use run_all_async() or run tests from outside async context."
+            )
+        return loop.run_until_complete(self.run_all_async())
 

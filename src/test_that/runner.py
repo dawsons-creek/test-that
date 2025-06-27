@@ -180,90 +180,56 @@ class SuiteContext:
 
 def suite(name_or_class=None, *, name=None):
     """
-    Create a test suite either as decorator or context manager.
-    
-    Usage as decorator:
-        @suite
-        class MathTests:
-            @test("addition works")
-            def test_add(self):
-                that(2 + 2).equals(4)
-                
-        # Or with custom name:
-        @suite(name="Math Operations")
-        class MathTests:
-            @test("addition works") 
-            def test_add(self):
-                that(2 + 2).equals(4)
-                
-    Usage as context manager:
-        with suite("Math Operations"):
-            @test("addition works")
-            def test_add():
-                that(2 + 2).equals(4)
+    Create a test suite either as a decorator or context manager.
     """
-    if name_or_class is None:
-        # Called as @suite() or @suite(name="...")
-        def decorator(cls):
-            suite_name = name if name else cls.__name__
-            return _create_class_suite(cls, suite_name)
-        return decorator
-    elif isinstance(name_or_class, str):
-        # Called as suite("name") for context manager
+    if isinstance(name_or_class, str):
         return SuiteContext(name_or_class)
+    
+    def decorator(cls):
+        suite_name = name if name else cls.__name__
+        return _create_class_suite(cls, suite_name)
+
+    if name_or_class is None:
+        return decorator
     else:
-        # Called as @suite without parentheses
-        return _create_class_suite(name_or_class, name_or_class.__name__)
+        return decorator(name_or_class)
 
 
 def _create_class_suite(cls, suite_name: str):
     """Create a suite from a test class."""
-    # First, remove any tests that were already registered for this class
     _remove_class_tests_from_registry(cls)
-    
-    # Create suite
     suite_obj = _registry.create_suite(suite_name)
-    
-    # Process all methods in the class that are decorated with @test
+
     for attr_name in dir(cls):
         attr_value = getattr(cls, attr_name)
         if callable(attr_value) and hasattr(attr_value, '_test_description'):
-            # This is a test method - convert to standalone function
-            test_description = attr_value._test_description
-            
-            # Create a wrapper that handles instance creation
-            # Use a closure to capture the method
-            def create_test_wrapper(method):
-                def test_wrapper(**fixtures):
-                    # Create class instance
-                    instance = cls()
-                    
-                    # Check if method needs fixtures
-                    sig = inspect.signature(method)
-                    params = list(sig.parameters.keys())
-                    
-                    # Skip 'self' parameter and call with remaining fixtures
-                    if params and params[0] == 'self':
-                        filtered_fixtures = {k: v for k, v in fixtures.items() 
-                                           if k in params[1:]}  # Skip 'self'
-                        return method(instance, **filtered_fixtures)
-                    else:
-                        return method(**fixtures)
-                
-                # Preserve original function for fixture resolution
-                test_wrapper._original_func = method
-                return test_wrapper
-            
-            wrapped_test = create_test_wrapper(attr_value)
-            
-            # Get line number from the method
-            line_number = getattr(attr_value, '_test_line', 
-                                getattr(attr_value, '__code__', type('', (), {'co_firstlineno': 0})).co_firstlineno)
-            
-            # Add to suite
-            suite_obj.add_test(test_description, wrapped_test, line_number)
+            _add_method_as_test(cls, suite_obj, attr_value)
     
     return cls
+
+def _add_method_as_test(cls, suite_obj, method):
+    """Adds a method from a class to a test suite."""
+    test_description = method._test_description
+    wrapped_test = _create_test_wrapper(cls, method)
+    line_number = getattr(method, '_test_line', 
+                        getattr(method, '__code__', type('', (), {'co_firstlineno': 0})).co_firstlineno)
+    suite_obj.add_test(test_description, wrapped_test, line_number)
+
+def _create_test_wrapper(cls, method):
+    """Create a wrapper that handles instance creation and fixture injection."""
+    def test_wrapper(**fixtures):
+        instance = cls()
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+
+        if params and params[0] == 'self':
+            filtered_fixtures = {k: v for k, v in fixtures.items() if k in params[1:]}
+            return method(instance, **filtered_fixtures)
+        else:
+            return method(**fixtures)
+
+    test_wrapper._original_func = method
+    return test_wrapper
 
 
 def _remove_class_tests_from_registry(cls):

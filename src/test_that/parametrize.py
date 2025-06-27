@@ -62,50 +62,46 @@ def _remove_test_from_registry(func: Callable):
 
 def _create_parametrized_test(func: Callable, test_description: str, args_set: Any, index: int):
     """Create a single parametrized test instance."""
-    # Handle both tuple/list args and dict args
     if isinstance(args_set, dict):
         param_desc = _format_dict_params(args_set)
-        def parametrized_test(**fixtures):
-            # Merge fixture args with parametrized args
-            combined_args = {**fixtures, **args_set}
-            return func(**combined_args)
+        parametrized_test = _create_dict_parametrized_test(func, args_set)
     else:
         param_desc = _format_tuple_params(args_set)
-        def parametrized_test(**fixtures):
-            # Get function signature to map args correctly
-            sig = inspect.signature(func)
-            params = list(sig.parameters.keys())
-            
-            # Build combined arguments
-            combined_kwargs = fixtures.copy()
-            
-            # Add parametrized args based on parameter order
-            for i, value in enumerate(args_set):
-                if i < len(params):
-                    combined_kwargs[params[i]] = value
-            
-            # Debug: Check what we're passing
-            # print(f"Function: {func.__name__}, Params: {params}, Fixtures: {fixtures}, Combined: {combined_kwargs}")
-                        
-            return func(**combined_kwargs)
+        parametrized_test = _create_tuple_parametrized_test(func, args_set)
     
-    # Create descriptive test name
     full_description = f"{test_description} [{param_desc}]"
+    line_number, file_path = _get_line_info()
     
-    # Get line number from original function
+    parametrized_test._original_func = func
+    _registry.add_test(full_description, parametrized_test, line_number, file_path)
+
+def _create_dict_parametrized_test(func: Callable, args_set: dict) -> Callable:
+    """Creates a parametrized test from a dictionary of arguments."""
+    def parametrized_test(**fixtures):
+        combined_args = {**fixtures, **args_set}
+        return func(**combined_args)
+    return parametrized_test
+
+def _create_tuple_parametrized_test(func: Callable, args_set: tuple) -> Callable:
+    """Creates a parametrized test from a tuple of arguments."""
+    def parametrized_test(**fixtures):
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+        combined_kwargs = fixtures.copy()
+        for i, value in enumerate(args_set):
+            if i < len(params):
+                combined_kwargs[params[i]] = value
+        return func(**combined_kwargs)
+    return parametrized_test
+
+def _get_line_info() -> Tuple[int, str]:
+    """Get the line number and file path from the call stack."""
     frame = inspect.currentframe()
     if frame and frame.f_back and frame.f_back.f_back:
         line_number = frame.f_back.f_back.f_lineno
         file_path = frame.f_back.f_back.f_code.co_filename
-    else:
-        line_number = 0
-        file_path = "<unknown>"
-    
-    # Store original function for fixture resolution
-    parametrized_test._original_func = func
-    
-    # Register the parametrized test
-    _registry.add_test(full_description, parametrized_test, line_number, file_path)
+        return line_number, file_path
+    return 0, "<unknown>"
 
 
 def _format_dict_params(args_dict: dict) -> str:

@@ -131,35 +131,38 @@ class HTTPRecorder:
 
     def _mock_request(self, original_request):
         """Create a mock request function."""
-
-        def mock_request_func(
-            method, url, headers=None, data=None, json=None, **kwargs
-        ):
-            # Convert json to data if provided
+        def mock_request_func(method, url, headers=None, data=None, json=None, **kwargs):
             body = data
             if json is not None:
                 body = json if isinstance(json, str) else json.dumps(json)
 
-            # Look for existing interaction
             matching = self._find_matching_interaction(method, url, headers or {}, body)
 
-            if matching and self.record_mode != "record":
-                # Return recorded response (unless forced to record)
-                return self._create_mock_response(matching)
-            elif self.record_mode == "replay_only":
-                # Fail if no recording exists and we're in replay-only mode
-                raise Exception(f"No recorded interaction found for {method} {url} (replay_only mode)")
-            elif self.record_mode in ("once", "record") and (not matching or self.record_mode == "record"):
-                # Record new interaction (or re-record if mode is "record")
-                response = original_request(
-                    method, url, headers=headers, data=data, json=json, **kwargs
-                )
-                self._record_interaction(method, url, headers or {}, body, response)
-                return response
+            if self.record_mode == "replay_only":
+                return self._handle_replay_only(matching, method, url)
+            elif self.record_mode == "record":
+                return self._handle_record(original_request, method, url, headers, data, json, body, **kwargs)
+            elif self.record_mode == "once":
+                return self._handle_once(matching, original_request, method, url, headers, data, json, body, **kwargs)
             else:
-                raise Exception(f"No recorded interaction found for {method} {url}")
-
+                raise Exception(f"Unknown record mode: {self.record_mode}")
         return mock_request_func
+
+    def _handle_replay_only(self, matching, method, url):
+        if not matching:
+            raise Exception(f"No recorded interaction found for {method} {url} (replay_only mode)")
+        return self._create_mock_response(matching)
+
+    def _handle_record(self, original_request, method, url, headers, data, json, body, **kwargs):
+        response = original_request(method, url, headers=headers, data=data, json=json, **kwargs)
+        self._record_interaction(method, url, headers or {}, body, response)
+        return response
+
+    def _handle_once(self, matching, original_request, method, url, headers, data, json, body, **kwargs):
+        if matching:
+            return self._create_mock_response(matching)
+        else:
+            return self._handle_record(original_request, method, url, headers, data, json, body, **kwargs)
 
     def record_during(self, func: Callable) -> Callable:
         """
@@ -173,65 +176,66 @@ class HTTPRecorder:
         """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Load existing cassette
             self.interactions = self._load_cassette()
-
-            # Get patch targets from adapter
             patch_targets = self.adapter.get_patch_targets()
-            
-            # Import the HTTP client module dynamically
+
             try:
-                client_module = __import__(self.http_client)
-                
-                # Get the original request function
-                original_request = None
-                for attr_path in patch_targets.values():
-                    parts = attr_path.split('.')
-                    obj = client_module
-                    for part in parts[1:]:
-                        obj = getattr(obj, part, None)
-                        if obj is None:
-                            break
-                    if obj and callable(obj) and 'request' in attr_path:
-                        original_request = obj
-                        break
-                
+                original_request = self._get_original_request(patch_targets)
                 if not original_request:
-                    # Fallback: just run the test without recording
-                    return func(*args, **kwargs)
-                
+                    return func(*args, **kwargs) # Fallback
+
                 mock_request = self._mock_request(original_request)
-                
-                # Create patches for all targets
-                patches = []
-                for target_name, target_path in patch_targets.items():
-                    if 'request' in target_name:
-                        patches.append(patch(target_path, mock_request))
-                    elif 'get' in target_name:
-                        patches.append(patch(target_path, lambda url, **kw: mock_request("GET", url, **kw)))
-                    elif 'post' in target_name:
-                        patches.append(patch(target_path, lambda url, **kw: mock_request("POST", url, **kw)))
-                    elif 'put' in target_name:
-                        patches.append(patch(target_path, lambda url, **kw: mock_request("PUT", url, **kw)))
-                    elif 'delete' in target_name:
-                        patches.append(patch(target_path, lambda url, **kw: mock_request("DELETE", url, **kw)))
-                
-                # Apply all patches
-                for p in patches:
-                    p.__enter__()
-                
-                try:
+                patches = self._create_patches(patch_targets, mock_request)
+
+                with self._apply_patches(patches):
                     return func(*args, **kwargs)
-                finally:
-                    # Clean up patches
-                    for p in reversed(patches):
-                        p.__exit__(None, None, None)
-                        
+
             except ImportError:
                 # HTTP client not available, just run the test
                 return func(*args, **kwargs)
 
         return wrapper
+
+    def _get_original_request(self, patch_targets: Dict[str, str]) -> Optional[Callable]:
+        """Get the original request function from the HTTP client module."""
+        client_module = __import__(self.http_client)
+        for attr_path in patch_targets.values():
+            if 'request' in attr_path:
+                obj = client_module
+                for part in attr_path.split('.')[1:]:
+                    obj = getattr(obj, part, None)
+                    if obj is None: break
+                if obj and callable(obj):
+                    return obj
+        return None
+
+    def _create_patches(self, patch_targets: Dict[str, str], mock_request: Callable) -> List[patch]:
+        """Create a list of patch objects for all HTTP methods."""
+        patches = []
+        method_map = {
+            'request': mock_request,
+            'get': lambda url, **kw: mock_request("GET", url, **kw),
+            'post': lambda url, **kw: mock_request("POST", url, **kw),
+            'put': lambda url, **kw: mock_request("PUT", url, **kw),
+            'delete': lambda url, **kw: mock_request("DELETE", url, **kw),
+        }
+        for name, path in patch_targets.items():
+            for method_name, mock_func in method_map.items():
+                if method_name in name:
+                    patches.append(patch(path, mock_func))
+                    break
+        return patches
+
+    def _apply_patches(self, patches: List[patch]):
+        """Context manager to apply and clean up patches."""
+        class PatchManager:
+            def __enter__(self):
+                for p in patches:
+                    p.__enter__()
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                for p in reversed(patches):
+                    p.__exit__(exc_type, exc_val, exc_tb)
+        return PatchManager()
 
 
 def http_record(cassette_name: str, *, record_mode: str = "once", 
