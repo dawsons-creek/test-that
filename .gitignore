@@ -230,6 +230,7 @@ htmlcov/
 
 # LLM instructions and development docs
 docs/
+ai_docs/
 
 # Claude Code files
 .claude/

@@ -4,7 +4,7 @@ Example tests for the That testing library.
 Demonstrates the basic usage and features.
 """
 
-from test_that import suite, test, that
+from test_that import suite, test, that, fixture
 
 
 # Simple standalone tests
@@ -99,16 +99,16 @@ with suite("Exception Handling"):
         that(result.value).equals("safe")
 
 
-# Test with setup and teardown
+# Test with fixtures
+@fixture()
+def db():
+    """Create a mock database."""
+    database = {"users": [], "next_id": 1}
+    yield database
+    database.clear()
+
+
 with suite("Database Tests"):
-    def setup():
-        """Create a mock database."""
-        return {"users": [], "next_id": 1}
-
-    def teardown(db):
-        """Clean up the database."""
-        db.clear()
-
     @test("can add user")
     def test_add_user(db):
         user = {"id": db["next_id"], "name": "John"}
