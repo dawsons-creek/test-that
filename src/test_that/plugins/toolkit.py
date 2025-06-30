@@ -13,7 +13,7 @@ class PluginTemplate:
     """Template generator for different plugin types."""
 
     PLUGIN_TEMPLATES = {
-        'decorator': '''"""
+        "decorator": '''"""
 {description}
 
 A decorator plugin for the That testing framework.
@@ -68,8 +68,7 @@ class {class_name}(DecoratorPlugin):
             return wrapper
         return decorator
 ''',
-
-        'assertion': '''"""
+        "assertion": '''"""
 {description}
 
 An assertion plugin for the That testing framework.
@@ -129,8 +128,7 @@ class {class_name}(AssertionPlugin):
         # Implement your validation logic here
         return True
 ''',
-
-        'lifecycle': '''"""
+        "lifecycle": '''"""
 {description}
 
 A lifecycle plugin for the That testing framework.
@@ -202,11 +200,17 @@ class {class_name}(LifecyclePlugin):
     def get_stats(self) -> Dict[str, Any]:
         """Get plugin statistics."""
         return self.stats.copy()
-'''
+''',
     }
 
-    def create_plugin(self, name: str, plugin_type: str, description: str = "",
-                     author: str = "Unknown", output_dir: str = ".") -> Path:
+    def create_plugin(
+        self,
+        name: str,
+        plugin_type: str,
+        description: str = "",
+        author: str = "Unknown",
+        output_dir: str = ".",
+    ) -> Path:
         """Create a new plugin from template."""
         if plugin_type not in self.PLUGIN_TEMPLATES:
             raise ValueError(f"Unknown plugin type: {plugin_type}")
@@ -220,15 +224,12 @@ class {class_name}(LifecyclePlugin):
         # Generate plugin code
         template = self.PLUGIN_TEMPLATES[plugin_type]
         code = template.format(
-            name=name,
-            class_name=class_name,
-            description=description,
-            author=author
+            name=name, class_name=class_name, description=description, author=author
         )
 
         # Create output file
         output_path = Path(output_dir) / f"{name}_plugin.py"
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write(dedent(code).strip())
 
         # Create test file
@@ -246,9 +247,14 @@ class {class_name}(LifecyclePlugin):
 
     def _to_class_name(self, name: str) -> str:
         """Convert plugin name to class name."""
-        return ''.join(word.capitalize() for word in name.replace('-', '_').split('_')) + 'Plugin'
+        return (
+            "".join(word.capitalize() for word in name.replace("-", "_").split("_"))
+            + "Plugin"
+        )
 
-    def _create_test_file(self, name: str, plugin_type: str, class_name: str, output_dir: str) -> Path:
+    def _create_test_file(
+        self, name: str, plugin_type: str, class_name: str, output_dir: str
+    ) -> Path:
         """Create a test file for the plugin."""
         test_template = f'''"""
 Tests for the {name} plugin.
@@ -285,8 +291,8 @@ with suite("{class_name} Tests"):
         that(lambda: plugin.cleanup()).does_not_raise()
 '''
 
-        if plugin_type == 'decorator':
-            test_template += f'''
+        if plugin_type == "decorator":
+            test_template += f"""
     @test("decorator is available")
     def test_decorator_available():
         plugin = {class_name}()
@@ -294,20 +300,20 @@ with suite("{class_name} Tests"):
 
         that(decorators).has_key("{name}")
         that(decorators["{name}"]).is_not_none()
-'''
+"""
 
-        elif plugin_type == 'assertion':
-            test_template += f'''
+        elif plugin_type == "assertion":
+            test_template += f"""
     @test("assertion methods are available")
     def test_assertion_methods():
         plugin = {class_name}()
         methods = plugin.get_assertion_methods()
 
         that(len(methods)).is_greater_than(0)
-'''
+"""
 
-        elif plugin_type == 'lifecycle':
-            test_template += f'''
+        elif plugin_type == "lifecycle":
+            test_template += f"""
     @test("lifecycle hooks are callable")
     def test_lifecycle_hooks():
         plugin = {class_name}()
@@ -318,17 +324,19 @@ with suite("{class_name} Tests"):
         that(lambda: plugin.before_test("test")).does_not_raise()
         that(lambda: plugin.after_test("test", None)).does_not_raise()
         that(lambda: plugin.after_test_run()).does_not_raise()
-'''
+"""
 
         test_path = Path(output_dir) / f"test_{name}_plugin.py"
-        with open(test_path, 'w') as f:
+        with open(test_path, "w") as f:
             f.write(dedent(test_template).strip())
 
         return test_path
 
-    def _create_config_example(self, name: str, plugin_type: str, output_dir: str) -> Path:
+    def _create_config_example(
+        self, name: str, plugin_type: str, output_dir: str
+    ) -> Path:
         """Create a configuration example file."""
-        config_template = f'''# Configuration example for {name} plugin
+        config_template = f"""# Configuration example for {name} plugin
 # Add to your pyproject.toml file
 
 [tool.test_that.plugins]
@@ -339,10 +347,10 @@ enabled = ["{name}"]
 # enabled = true
 # option1 = "value1"
 # option2 = 42
-'''
+"""
 
         config_path = Path(output_dir) / f"{name}_plugin_config.toml"
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             f.write(config_template)
 
         return config_path
@@ -365,24 +373,25 @@ class PluginValidator:
             return [f"Could not read plugin file: {e}"]
 
         # Check for required imports
-        if 'from test_that.plugins.base import' not in content:
+        if "from test_that.plugins.base import" not in content:
             issues.append("Missing import from test_that.plugins.base")
 
         # Check for plugin class
-        if 'Plugin(' not in content:
+        if "Plugin(" not in content:
             issues.append("No plugin class found (should inherit from PluginBase)")
 
         # Check for info property
-        if '@property' not in content or 'def info(' not in content:
+        if "@property" not in content or "def info(" not in content:
             issues.append("Missing info property")
 
         # Check for PluginInfo
-        if 'PluginInfo(' not in content:
+        if "PluginInfo(" not in content:
             issues.append("Missing PluginInfo instance")
 
         # Try to import and validate
         try:
             import importlib.util
+
             spec = importlib.util.spec_from_file_location("test_plugin", file_path)
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
@@ -392,9 +401,11 @@ class PluginValidator:
                 plugin_class = None
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
-                    if (isinstance(attr, type) and
-                        hasattr(attr, 'info') and
-                        attr.__name__.endswith('Plugin')):
+                    if (
+                        isinstance(attr, type)
+                        and hasattr(attr, "info")
+                        and attr.__name__.endswith("Plugin")
+                    ):
                         plugin_class = attr
                         break
 
@@ -416,7 +427,7 @@ class PluginValidator:
             plugin = plugin_class()
 
             # Validate info
-            if hasattr(plugin, 'info'):
+            if hasattr(plugin, "info"):
                 info = plugin.info
                 if not info.name:
                     issues.append("Plugin name is empty")
@@ -450,20 +461,24 @@ def create_plugin_cli() -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Create a new That plugin")
-    parser.add_argument('name', help='Plugin name (e.g., my_plugin)')
-    parser.add_argument('type', choices=['decorator', 'assertion', 'lifecycle'],
-                       help='Plugin type')
-    parser.add_argument('--description', help='Plugin description')
-    parser.add_argument('--author', default='Unknown', help='Plugin author')
-    parser.add_argument('--output-dir', default='.', help='Output directory')
+    parser.add_argument("name", help="Plugin name (e.g., my_plugin)")
+    parser.add_argument(
+        "type", choices=["decorator", "assertion", "lifecycle"], help="Plugin type"
+    )
+    parser.add_argument("--description", help="Plugin description")
+    parser.add_argument("--author", default="Unknown", help="Plugin author")
+    parser.add_argument("--output-dir", default=".", help="Output directory")
 
     args = parser.parse_args()
 
     template = PluginTemplate()
     try:
         output_path = template.create_plugin(
-            args.name, args.type, args.description or f"A {args.type} plugin",
-            args.author, args.output_dir
+            args.name,
+            args.type,
+            args.description or f"A {args.type} plugin",
+            args.author,
+            args.output_dir,
         )
         print("\nPlugin created successfully!")
         print("\nNext steps:")
@@ -477,6 +492,7 @@ def create_plugin_cli() -> int:
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     sys.exit(create_plugin_cli())

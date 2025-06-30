@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List
 @dataclass
 class PluginInfo:
     """Plugin metadata with version compatibility and dependencies."""
+
     name: str
     version: str
     description: str
@@ -125,19 +126,23 @@ class LifecyclePlugin(PluginBase):
 
 class PluginError(Exception):
     """Base exception for plugin-related errors."""
+
     pass
 
 
 class PluginConflictError(PluginError):
     """Raised when plugins conflict with each other."""
+
     pass
 
 
 class PluginDependencyError(PluginError):
     """Raised when plugin dependencies are missing."""
+
     pass
 
 
 class PluginVersionError(PluginError):
     """Raised when plugin version is incompatible."""
+
     pass

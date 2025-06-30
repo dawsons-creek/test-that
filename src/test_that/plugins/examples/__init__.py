@@ -7,4 +7,4 @@ and provide useful examples for plugin developers.
 
 from .database_plugin import DatabasePlugin
 
-__all__ = ['DatabasePlugin']
+__all__ = ["DatabasePlugin"]

@@ -67,12 +67,13 @@ class TimeContextOrDecorator:
     def _create_mock_time_values(self, dt: datetime.datetime) -> dict:
         """Create mock time values for patching."""
         return {
-            'now': dt,
-            'utcnow': (
-                dt.astimezone(datetime.timezone.utc) if dt.tzinfo
+            "now": dt,
+            "utcnow": (
+                dt.astimezone(datetime.timezone.utc)
+                if dt.tzinfo
                 else dt.replace(tzinfo=datetime.timezone.utc)
             ),
-            'timestamp': dt.timestamp()
+            "timestamp": dt.timestamp(),
         }
 
     def _create_and_start_patches(self, mock_values: dict):
@@ -83,13 +84,17 @@ class TimeContextOrDecorator:
 
         self._datetime_patch = patch("datetime.datetime")
         self._date_patch = patch("datetime.date")
-        self._time_patch = patch("time.time", return_value=mock_values['timestamp'])
+        self._time_patch = patch("time.time", return_value=mock_values["timestamp"])
         self._time_ns_patch = patch(
             "time.time_ns",
-            return_value=int(mock_values['timestamp'] * NANOSECONDS_PER_SECOND)
+            return_value=int(mock_values["timestamp"] * NANOSECONDS_PER_SECOND),
         )
-        self._gmtime_patch = patch("time.gmtime", return_value=mock_values['utcnow'].timetuple())
-        self._localtime_patch = patch("time.localtime", return_value=mock_values['now'].timetuple())
+        self._gmtime_patch = patch(
+            "time.gmtime", return_value=mock_values["utcnow"].timetuple()
+        )
+        self._localtime_patch = patch(
+            "time.localtime", return_value=mock_values["now"].timetuple()
+        )
 
         # Start all patches
         self._mock_datetime = self._datetime_patch.start()
@@ -108,9 +113,9 @@ class TimeContextOrDecorator:
         original_date = dt_module.date
 
         # Configure datetime mock
-        self._mock_datetime.now.return_value = mock_values['now']
-        self._mock_datetime.utcnow.return_value = mock_values['utcnow']
-        self._mock_datetime.today.return_value = mock_values['now'].date()
+        self._mock_datetime.now.return_value = mock_values["now"]
+        self._mock_datetime.utcnow.return_value = mock_values["utcnow"]
+        self._mock_datetime.today.return_value = mock_values["now"].date()
 
         # Forward constructor and methods
         self._mock_datetime.side_effect = lambda *a, **k: original_datetime(*a, **k)
@@ -121,7 +126,7 @@ class TimeContextOrDecorator:
         self._mock_datetime.max = original_datetime.max
 
         # Configure date mock
-        self._mock_date.today.return_value = mock_values['now'].date()
+        self._mock_date.today.return_value = mock_values["now"].date()
         self._mock_date.side_effect = lambda *a, **k: original_date(*a, **k)
         self._mock_date.fromisoformat = original_date.fromisoformat
         self._mock_date.fromordinal = original_date.fromordinal
@@ -132,17 +137,17 @@ class TimeContextOrDecorator:
         """Exit context manager."""
         try:
             # Stop all patches
-            if hasattr(self, '_datetime_patch'):
+            if hasattr(self, "_datetime_patch"):
                 self._datetime_patch.stop()
-            if hasattr(self, '_date_patch'):
+            if hasattr(self, "_date_patch"):
                 self._date_patch.stop()
-            if hasattr(self, '_time_patch'):
+            if hasattr(self, "_time_patch"):
                 self._time_patch.stop()
-            if hasattr(self, '_time_ns_patch'):
+            if hasattr(self, "_time_ns_patch"):
                 self._time_ns_patch.stop()
-            if hasattr(self, '_gmtime_patch'):
+            if hasattr(self, "_gmtime_patch"):
                 self._gmtime_patch.stop()
-            if hasattr(self, '_localtime_patch'):
+            if hasattr(self, "_localtime_patch"):
                 self._localtime_patch.stop()
 
             if self.replay._context_stack:
@@ -150,7 +155,9 @@ class TimeContextOrDecorator:
             self.replay._context_time = self.old_time
         except Exception as e:
             # Don't raise in __exit__ unless it's critical
-            warnings.warn(f"Error exiting time context: {e}", RuntimeWarning, stacklevel=2)
+            warnings.warn(
+                f"Error exiting time context: {e}", RuntimeWarning, stacklevel=2
+            )
 
 
 class Replay:
@@ -212,8 +219,12 @@ class Replay:
         """
         return self._http_decorator(cassette_name, mode)
 
-    def __call__(self, time: Optional[Union[str, Any]] = None,
-                 http: Optional[str] = None, mode: str = "once"):
+    def __call__(
+        self,
+        time: Optional[Union[str, Any]] = None,
+        http: Optional[str] = None,
+        mode: str = "once",
+    ):
         """
         Combined time and HTTP control.
 
@@ -230,6 +241,7 @@ class Replay:
                 user = User.from_api_response(response)
                 that(user.created_at).equals(datetime(2024, 1, 1, 12, 0, 0))
         """
+
         def decorator(func: Callable) -> Callable:
             # Apply decorators in order (time first, then http)
             decorated_func = func
@@ -246,30 +258,36 @@ class Replay:
 
     def _time_decorator(self, frozen_time: Union[str, Any]):
         """Create time freezing decorator."""
+
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 try:
                     # Use context time if available, otherwise use specified time
-                    effective_time = self._context_time if self._context_time else frozen_time
+                    effective_time = (
+                        self._context_time if self._context_time else frozen_time
+                    )
                     freezer = TimeFreeze(effective_time)
                     frozen_func = freezer.freeze_during(func)
                     return frozen_func(*args, **kwargs)
                 except Exception as e:
-                    raise RuntimeError(f"Time freezing failed for {func.__name__}: {e}") from e
+                    raise RuntimeError(
+                        f"Time freezing failed for {func.__name__}: {e}"
+                    ) from e
+
             return wrapper
+
         return decorator
 
     def _http_decorator(self, cassette_name: str, mode: str = "once"):
         """Create HTTP recording decorator."""
+
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 try:
                     recorder = HTTPRecorder(
-                        cassette_name,
-                        mode,
-                        recordings_dir=self.config.recordings_dir
+                        cassette_name, mode, recordings_dir=self.config.recordings_dir
                     )
                     recorded_func = recorder.record_during(func)
 
@@ -281,13 +299,14 @@ class Replay:
                     else:
                         return recorded_func(*args, **kwargs)
                 except Exception as e:
-                    raise RuntimeError(f"HTTP recording failed for {func.__name__}: {e}") from e
-            return wrapper
-        return decorator
+                    raise RuntimeError(
+                        f"HTTP recording failed for {func.__name__}: {e}"
+                    ) from e
 
+            return wrapper
+
+        return decorator
 
 
 # Create singleton instance
 replay = Replay()
-
-

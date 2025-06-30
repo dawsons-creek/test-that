@@ -24,54 +24,62 @@ class DatabasePlugin(DecoratorPlugin, LifecyclePlugin):
             optional_dependencies=["sqlalchemy", "psycopg2"],
             author="That Framework",
             url="https://github.com/that-framework/database-plugin",
-            priority=50  # High priority for setup/teardown
+            priority=50,  # High priority for setup/teardown
         )
 
     def initialize(self, config: Dict[str, Any]) -> None:
         """Initialize plugin with configuration."""
         self.config = config
-        self.connection_url = config.get('connection_url', 'sqlite:///:memory:')
-        self.auto_rollback = config.get('auto_rollback', True)
-        self.pool_size = config.get('pool_size', 5)
+        self.connection_url = config.get("connection_url", "sqlite:///:memory:")
+        self.auto_rollback = config.get("auto_rollback", True)
+        self.pool_size = config.get("pool_size", 5)
         self.stats = {
-            'transactions_created': 0,
-            'rollbacks_performed': 0,
-            'connections_opened': 0
+            "transactions_created": 0,
+            "rollbacks_performed": 0,
+            "connections_opened": 0,
         }
 
     def get_decorators(self) -> Dict[str, Callable]:
         """Return database decorators."""
         return {
             "transaction": self._create_transaction_decorator,
-            "database": self._create_database_decorator
+            "database": self._create_database_decorator,
         }
 
     def _create_transaction_decorator(self, rollback: bool = None):
         """Create database transaction decorator."""
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 # Use config default if not specified
-                should_rollback = rollback if rollback is not None else self.auto_rollback
+                should_rollback = (
+                    rollback if rollback is not None else self.auto_rollback
+                )
 
                 with self._database_transaction(should_rollback):
                     return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     def _create_database_decorator(self, connection_name: str = "default"):
         """Create database connection decorator."""
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 with self._database_connection(connection_name) as conn:
                     # Inject connection as first argument
                     return func(conn, *args, **kwargs)
+
             return wrapper
+
         return decorator
 
     @contextmanager
     def _database_transaction(self, rollback: bool = True):
         """Context manager for database transactions."""
-        self.stats['transactions_created'] += 1
+        self.stats["transactions_created"] += 1
         print(f"[Database] Starting transaction (rollback={rollback})")
 
         try:
@@ -79,18 +87,18 @@ class DatabasePlugin(DecoratorPlugin, LifecyclePlugin):
             yield
             if rollback:
                 print("[Database] Rolling back transaction")
-                self.stats['rollbacks_performed'] += 1
+                self.stats["rollbacks_performed"] += 1
             else:
                 print("[Database] Committing transaction")
         except Exception as e:
             print(f"[Database] Transaction failed, rolling back: {e}")
-            self.stats['rollbacks_performed'] += 1
+            self.stats["rollbacks_performed"] += 1
             raise
 
     @contextmanager
     def _database_connection(self, name: str):
         """Context manager for database connections."""
-        self.stats['connections_opened'] += 1
+        self.stats["connections_opened"] += 1
         print(f"[Database] Opening connection: {name}")
 
         try:

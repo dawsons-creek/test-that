@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Set, Tuple
 @dataclass
 class DiscoveredTest:
     """Information about a discovered test."""
+
     name: str
     function_name: str
     line_number: int
@@ -29,6 +30,7 @@ class DiscoveredTest:
 @dataclass
 class DiscoveredSuite:
     """Information about a discovered test suite."""
+
     name: str
     line_number: int
     tests: List[DiscoveredTest] = None
@@ -57,8 +59,7 @@ class TestDiscoveryVisitor(ast.NodeVisitor):
                     # Found a suite context
                     suite_name = self._extract_suite_name(item.context_expr)
                     self.current_suite = DiscoveredSuite(
-                        name=suite_name,
-                        line_number=node.lineno
+                        name=suite_name, line_number=node.lineno
                     )
                     self.suites.append(self.current_suite)
                     self.in_suite_context = True
@@ -91,8 +92,7 @@ class TestDiscoveryVisitor(ast.NodeVisitor):
             # This is a suite class
             suite_name = node.name
             self.current_suite = DiscoveredSuite(
-                name=suite_name,
-                line_number=node.lineno
+                name=suite_name, line_number=node.lineno
             )
             self.suites.append(self.current_suite)
 
@@ -123,7 +123,9 @@ class TestDiscoveryVisitor(ast.NodeVisitor):
                     decorators.append(func.id)
                     if func.id == "test":
                         # Extract test description if provided
-                        if decorator.args and isinstance(decorator.args[0], ast.Constant):
+                        if decorator.args and isinstance(
+                            decorator.args[0], ast.Constant
+                        ):
                             test_name = decorator.args[0].value
                         else:
                             test_name = node.name
@@ -136,7 +138,7 @@ class TestDiscoveryVisitor(ast.NodeVisitor):
                 line_number=node.lineno,
                 suite_name=self.current_suite.name if self.current_suite else None,
                 is_async=isinstance(node, ast.AsyncFunctionDef),
-                decorators=decorators
+                decorators=decorators,
             )
 
             self.tests.append(test)
@@ -165,17 +167,19 @@ class TestDiscovery:
         self.discovered_tests: Dict[str, List[DiscoveredTest]] = {}
         self.discovered_suites: Dict[str, List[DiscoveredSuite]] = {}
 
-    def discover_file(self, file_path: Path) -> Tuple[List[DiscoveredTest], List[DiscoveredSuite]]:
+    def discover_file(
+        self, file_path: Path
+    ) -> Tuple[List[DiscoveredTest], List[DiscoveredSuite]]:
         """Discover tests in a single file using AST parsing.
-        
+
         Args:
             file_path: Path to the test file
-            
+
         Returns:
             Tuple of (tests, suites) discovered in the file
         """
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 source = f.read()
 
             tree = ast.parse(source, filename=str(file_path))
@@ -195,7 +199,7 @@ class TestDiscovery:
 
     def discover_directory(self, directory: Path, pattern: str = "test_*.py") -> None:
         """Discover all tests in a directory.
-        
+
         Args:
             directory: Directory to search
             pattern: File pattern to match
@@ -207,13 +211,15 @@ class TestDiscovery:
                 if file_path.is_file() and file_path.suffix == ".py":
                     self.discover_file(file_path)
 
-    def get_tests_at_lines(self, file_path: str, line_numbers: Set[int]) -> List[DiscoveredTest]:
+    def get_tests_at_lines(
+        self, file_path: str, line_numbers: Set[int]
+    ) -> List[DiscoveredTest]:
         """Get tests at specific line numbers in a file.
-        
+
         Args:
             file_path: Absolute path to the file
             line_numbers: Set of line numbers to check
-            
+
         Returns:
             List of tests at those line numbers
         """
@@ -228,10 +234,10 @@ class TestDiscovery:
 
     def get_tests_by_pattern(self, pattern: str) -> List[DiscoveredTest]:
         """Get tests matching a name pattern.
-        
+
         Args:
             pattern: Pattern to match in test names
-            
+
         Returns:
             List of matching tests
         """
@@ -247,10 +253,10 @@ class TestDiscovery:
 
     def get_suite_tests(self, suite_name: str) -> List[DiscoveredTest]:
         """Get all tests in a specific suite.
-        
+
         Args:
             suite_name: Name of the suite
-            
+
         Returns:
             List of tests in that suite
         """
@@ -265,7 +271,7 @@ class TestDiscovery:
 
     def get_all_tests(self) -> List[Tuple[str, DiscoveredTest]]:
         """Get all discovered tests with their file paths.
-        
+
         Returns:
             List of (file_path, test) tuples
         """
@@ -291,4 +297,3 @@ class TestDiscovery:
                     prefix = "  async " if test.is_async else "  "
                     suite_info = f" [{test.suite_name}]" if test.suite_name else ""
                     print(f"{prefix}{test.name}{suite_info} (line {test.line_number})")
-

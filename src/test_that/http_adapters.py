@@ -128,7 +128,9 @@ class AioHTTPAdapter(HTTPClientAdapter):
     def create_mock_response(self, response_data: Dict[str, Any]) -> Any:
         """Create a mock aiohttp.ClientResponse object."""
         mock_response = MagicMock()
-        mock_response.status = response_data["status"]  # aiohttp uses 'status', not 'status_code'
+        mock_response.status = response_data[
+            "status"
+        ]  # aiohttp uses 'status', not 'status_code'
         mock_response.headers = response_data["headers"]
 
         # aiohttp uses async methods for content
@@ -164,13 +166,13 @@ ADAPTERS = {
 
 def get_adapter(client_name: str) -> HTTPClientAdapter:
     """Get an adapter instance for the specified client.
-    
+
     Args:
         client_name: Name of the HTTP client library
-        
+
     Returns:
         HTTPClientAdapter instance
-        
+
     Raises:
         ValueError: If no adapter exists for the client
     """
@@ -188,4 +190,3 @@ def get_adapter(client_name: str) -> HTTPClientAdapter:
         client_module = None
 
     return ADAPTERS[client_name](client_module)
-

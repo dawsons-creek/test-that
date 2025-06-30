@@ -7,7 +7,8 @@ Handles test registration, discovery, and execution.
 import asyncio
 import inspect
 import time
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple
+
 from .fixtures import get_fixture_registry
 from .source_inspection import get_line_info_with_explicit
 
@@ -139,20 +140,20 @@ def test(description: str):
     def decorator(func: Callable):
         # Store description on function for parametrize decorator
         func._test_description = description
-        
+
         # Get the line number using robust source inspection
         line_number, file_path = get_line_info_with_explicit(func)
 
         # Check if this is a method (has __qualname__ with '.')
         # If so, don't register it yet - wait for the suite decorator
-        if hasattr(func, '__qualname__') and '.' in func.__qualname__:
+        if hasattr(func, "__qualname__") and "." in func.__qualname__:
             # This is a method, store the registration info but don't register yet
             func._test_line = line_number
             func._test_file = file_path
         else:
             # This is a regular function, register immediately
             _registry.add_test(description, func, line_number, file_path)
-        
+
         return func
 
     return decorator
@@ -182,7 +183,7 @@ def suite(name_or_class=None, *, name=None):
     """
     if isinstance(name_or_class, str):
         return SuiteContext(name_or_class)
-    
+
     def decorator(cls):
         suite_name = name if name else cls.__name__
         return _create_class_suite(cls, suite_name)
@@ -200,27 +201,33 @@ def _create_class_suite(cls, suite_name: str):
 
     for attr_name in dir(cls):
         attr_value = getattr(cls, attr_name)
-        if callable(attr_value) and hasattr(attr_value, '_test_description'):
+        if callable(attr_value) and hasattr(attr_value, "_test_description"):
             _add_method_as_test(cls, suite_obj, attr_value)
-    
+
     return cls
+
 
 def _add_method_as_test(cls, suite_obj, method):
     """Adds a method from a class to a test suite."""
     test_description = method._test_description
     wrapped_test = _create_test_wrapper(cls, method)
-    line_number = getattr(method, '_test_line', 
-                        getattr(method, '__code__', type('', (), {'co_firstlineno': 0})).co_firstlineno)
+    line_number = getattr(
+        method,
+        "_test_line",
+        getattr(method, "__code__", type("", (), {"co_firstlineno": 0})).co_firstlineno,
+    )
     suite_obj.add_test(test_description, wrapped_test, line_number)
+
 
 def _create_test_wrapper(cls, method):
     """Create a wrapper that handles instance creation and fixture injection."""
+
     def test_wrapper(**fixtures):
         instance = cls()
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
 
-        if params and params[0] == 'self':
+        if params and params[0] == "self":
             filtered_fixtures = {k: v for k, v in fixtures.items() if k in params[1:]}
             return method(instance, **filtered_fixtures)
         else:
@@ -234,15 +241,16 @@ def _remove_class_tests_from_registry(cls):
     """Remove any tests from a class that were already registered."""
     # Remove standalone tests that belong to this class
     _registry.standalone_tests = [
-        (name, func, line) for name, func, line in _registry.standalone_tests
-        if not (hasattr(func, '__self__') and isinstance(func.__self__, cls))
+        (name, func, line)
+        for name, func, line in _registry.standalone_tests
+        if not (hasattr(func, "__self__") and isinstance(func.__self__, cls))
     ]
 
 
 class TestRunner:
     """Runs tests and collects results."""
 
-    def __init__(self, verbose: bool = False, context: Optional['TestContext'] = None):
+    def __init__(self, verbose: bool = False, context: Optional["TestContext"] = None):
         self.verbose = verbose
         self.results: List[TestResult] = []
         self.context = context  # Optional context for isolation
@@ -260,7 +268,7 @@ class TestRunner:
 
         try:
             # Resolve fixtures for this test - use original function if parametrized
-            func_for_fixtures = getattr(test_func, '_original_func', test_func)
+            func_for_fixtures = getattr(test_func, "_original_func", test_func)
             fixtures = fixture_registry.resolve_fixtures(func_for_fixtures)
 
             if asyncio.iscoroutinefunction(test_func):
@@ -282,11 +290,11 @@ class TestRunner:
     def run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite."""
         results = []
-        
+
         for test_name, test_func, _ in suite.tests:
             result = self.run_test(test_name, test_func)
             results.append(result)
-        
+
         # Cleanup suite-scoped fixtures after all tests in suite
         if self.context:
             fixture_registry = self.context.fixture_registry
@@ -325,7 +333,7 @@ class TestRunner:
 
 def _execute_async_test(test_func: Callable, fixtures: Dict[str, Any]):
     """Execute async test function with proper event loop handling.
-    
+
     This is a simplified version that handles the common case where tests
     are run from a synchronous context. For more advanced async handling,
     use AsyncTestRunner from async_runner module.
@@ -333,8 +341,6 @@ def _execute_async_test(test_func: Callable, fixtures: Dict[str, Any]):
     # Always create a new event loop for test isolation
     # This avoids issues with nested loops and ensures clean state
     asyncio.run(test_func(**fixtures))
-
-
 
 
 def get_registry() -> TestRegistry:

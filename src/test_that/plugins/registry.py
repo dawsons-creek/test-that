@@ -68,15 +68,17 @@ class PluginRegistry:
                 self._initialized = True
 
                 load_time = time.perf_counter() - start_time
-                if load_time > self._config.get('max_load_time', 5.0):
+                if load_time > self._config.get("max_load_time", 5.0):
                     print(f"Warning: Plugin loading took {load_time:.2f}s")
 
             except Exception as e:
-                if self._config.get('fail_on_plugin_error', False):
+                if self._config.get("fail_on_plugin_error", False):
                     raise
                 print(f"Warning: Plugin system initialization failed: {e}")
 
-    def register_plugin(self, plugin_class: Type[PluginBase], force: bool = False) -> None:
+    def register_plugin(
+        self, plugin_class: Type[PluginBase], force: bool = False
+    ) -> None:
         """Register a plugin with conflict detection and validation."""
         with self._lock:
             plugin = plugin_class()
@@ -87,20 +89,24 @@ class PluginRegistry:
             # Check for conflicts
             if plugin.info.name in self._plugins and not force:
                 existing = self._plugins[plugin.info.name]
-                if not self._config.get('allow_plugin_override', False):
+                if not self._config.get("allow_plugin_override", False):
                     raise PluginConflictError(
                         f"Plugin '{plugin.info.name}' already registered "
                         f"(existing: v{existing.info.version}, new: v{plugin.info.version})"
                     )
                 else:
-                    print(f"Warning: Overriding plugin {plugin.info.name} "
-                          f"v{existing.info.version} with v{plugin.info.version}")
+                    print(
+                        f"Warning: Overriding plugin {plugin.info.name} "
+                        f"v{existing.info.version} with v{plugin.info.version}"
+                    )
 
             # Check dependencies
             missing_deps = plugin.validate_dependencies()
             if missing_deps:
-                error_msg = f"Plugin '{plugin.info.name}' missing dependencies: {missing_deps}"
-                if plugin.info.name not in self._config.get('optional_plugins', []):
+                error_msg = (
+                    f"Plugin '{plugin.info.name}' missing dependencies: {missing_deps}"
+                )
+                if plugin.info.name not in self._config.get("optional_plugins", []):
                     raise PluginDependencyError(error_msg)
                 else:
                     print(f"Warning: {error_msg}")
@@ -114,9 +120,13 @@ class PluginRegistry:
             try:
                 start_time = time.perf_counter()
                 plugin.initialize(plugin_config)
-                self._plugin_load_times[plugin.info.name] = time.perf_counter() - start_time
+                self._plugin_load_times[plugin.info.name] = (
+                    time.perf_counter() - start_time
+                )
             except Exception as e:
-                raise PluginError(f"Plugin '{plugin.info.name}' initialization failed: {e}") from e
+                raise PluginError(
+                    f"Plugin '{plugin.info.name}' initialization failed: {e}"
+                ) from e
 
             # Register by type with priority sorting
             self._plugins[plugin.info.name] = plugin
@@ -166,7 +176,9 @@ class PluginRegistry:
                     plugin_decorators = plugin.get_decorators()
                     decorators.update(plugin_decorators)
                 except Exception as e:
-                    print(f"Warning: Error getting decorators from {plugin.info.name}: {e}")
+                    print(
+                        f"Warning: Error getting decorators from {plugin.info.name}: {e}"
+                    )
             return decorators
 
     def get_assertion_methods(self) -> Dict[str, Callable]:
@@ -178,7 +190,9 @@ class PluginRegistry:
                     plugin_methods = plugin.get_assertion_methods()
                     methods.update(plugin_methods)
                 except Exception as e:
-                    print(f"Warning: Error getting assertions from {plugin.info.name}: {e}")
+                    print(
+                        f"Warning: Error getting assertions from {plugin.info.name}: {e}"
+                    )
             return methods
 
     def trigger_lifecycle_event(self, event: str, *args, **kwargs) -> None:
@@ -189,18 +203,24 @@ class PluginRegistry:
                     try:
                         getattr(plugin, event)(*args, **kwargs)
                     except Exception as e:
-                        print(f"Warning: Plugin {plugin.info.name} failed in {event}: {e}")
+                        print(
+                            f"Warning: Plugin {plugin.info.name} failed in {event}: {e}"
+                        )
 
     async def trigger_lifecycle_event_async(self, event: str, *args, **kwargs) -> None:
         """Trigger async lifecycle event on all lifecycle plugins."""
         # Note: Not using lock here to avoid blocking async operations
         async_event = f"{event}_async"
-        for plugin in self._lifecycle_plugins[:]:  # Copy to avoid modification during iteration
+        for plugin in self._lifecycle_plugins[
+            :
+        ]:  # Copy to avoid modification during iteration
             if hasattr(plugin, async_event):
                 try:
                     await getattr(plugin, async_event)(*args, **kwargs)
                 except Exception as e:
-                    print(f"Warning: Plugin {plugin.info.name} failed in {async_event}: {e}")
+                    print(
+                        f"Warning: Plugin {plugin.info.name} failed in {async_event}: {e}"
+                    )
 
     def list_plugins(self) -> List[Dict[str, Any]]:
         """List all plugins with their metadata."""
@@ -208,29 +228,31 @@ class PluginRegistry:
             plugins_info = []
             for plugin in self._plugins.values():
                 info = {
-                    'name': plugin.info.name,
-                    'version': plugin.info.version,
-                    'description': plugin.info.description,
-                    'type': self._get_plugin_types(plugin),
-                    'dependencies': plugin.info.dependencies,
-                    'load_time': self._plugin_load_times.get(plugin.info.name, 0),
-                    'priority': plugin.info.priority
+                    "name": plugin.info.name,
+                    "version": plugin.info.version,
+                    "description": plugin.info.description,
+                    "type": self._get_plugin_types(plugin),
+                    "dependencies": plugin.info.dependencies,
+                    "load_time": self._plugin_load_times.get(plugin.info.name, 0),
+                    "priority": plugin.info.priority,
                 }
                 plugins_info.append(info)
 
             # Add lazy plugins
             for name in self._lazy_plugins:
-                plugins_info.append({
-                    'name': name,
-                    'version': 'unknown',
-                    'description': 'Lazy-loaded plugin',
-                    'type': ['lazy'],
-                    'dependencies': [],
-                    'load_time': 0,
-                    'priority': 100
-                })
+                plugins_info.append(
+                    {
+                        "name": name,
+                        "version": "unknown",
+                        "description": "Lazy-loaded plugin",
+                        "type": ["lazy"],
+                        "dependencies": [],
+                        "load_time": 0,
+                        "priority": 100,
+                    }
+                )
 
-            return sorted(plugins_info, key=lambda p: p['name'])
+            return sorted(plugins_info, key=lambda p: p["name"])
 
     def cleanup(self) -> None:
         """Cleanup all plugins and resources."""
@@ -253,57 +275,57 @@ class PluginRegistry:
         """Get plugin system statistics."""
         with self._lock:
             return {
-                'total_plugins': len(self._plugins),
-                'decorator_plugins': len(self._decorator_plugins),
-                'assertion_plugins': len(self._assertion_plugins),
-                'lifecycle_plugins': len(self._lifecycle_plugins),
-                'lazy_plugins': len(self._lazy_plugins),
-                'failed_plugins': len(self._failed_plugins),
-                'total_load_time': sum(self._plugin_load_times.values()),
-                'average_load_time': (
+                "total_plugins": len(self._plugins),
+                "decorator_plugins": len(self._decorator_plugins),
+                "assertion_plugins": len(self._assertion_plugins),
+                "lifecycle_plugins": len(self._lifecycle_plugins),
+                "lazy_plugins": len(self._lazy_plugins),
+                "failed_plugins": len(self._failed_plugins),
+                "total_load_time": sum(self._plugin_load_times.values()),
+                "average_load_time": (
                     sum(self._plugin_load_times.values()) / len(self._plugin_load_times)
-                    if self._plugin_load_times else 0
+                    if self._plugin_load_times
+                    else 0
                 ),
-                'initialized': self._initialized
+                "initialized": self._initialized,
             }
 
     def _load_builtin_plugins(self) -> None:
         """Load built-in plugins with lazy registration."""
         builtin_plugins = [
-            ('replay', 'test_that.plugins.replay:ReplayPlugin'),
-            ('json_schema', 'test_that.plugins.json_schema:JSONSchemaPlugin'),
-            ('lifecycle', 'test_that.plugins.lifecycle:ExampleLifecyclePlugin'),
+            ("replay", "test_that.plugins.replay:ReplayPlugin"),
+            ("json_schema", "test_that.plugins.json_schema:JSONSchemaPlugin"),
+            ("lifecycle", "test_that.plugins.lifecycle:ExampleLifecyclePlugin"),
         ]
 
         for name, spec in builtin_plugins:
             if is_plugin_enabled(name):
-                self.register_lazy_plugin(name, lambda s=spec: self._load_plugin_from_spec(s))
+                self.register_lazy_plugin(
+                    name, lambda s=spec: self._load_plugin_from_spec(s)
+                )
 
     def _load_entry_point_plugins(self) -> None:
         """Load plugins from entry points."""
         try:
             # Handle different versions of importlib.metadata
             entry_points = importlib.metadata.entry_points()
-            if hasattr(entry_points, 'get'):
+            if hasattr(entry_points, "get"):
                 # Older style
-                plugin_entry_points = entry_points.get('test_that.plugins', [])
+                plugin_entry_points = entry_points.get("test_that.plugins", [])
             else:
                 # Newer style (Python 3.10+)
-                plugin_entry_points = entry_points.select(group='test_that.plugins')
+                plugin_entry_points = entry_points.select(group="test_that.plugins")
 
             for entry_point in plugin_entry_points:
                 name = entry_point.name
                 if is_plugin_enabled(name):
-                    self.register_lazy_plugin(
-                        name,
-                        lambda ep=entry_point: ep.load()
-                    )
+                    self.register_lazy_plugin(name, lambda ep=entry_point: ep.load())
         except Exception as e:
             print(f"Warning: Failed to load entry point plugins: {e}")
 
     def _load_directory_plugins(self) -> None:
         """Load plugins from configured directories."""
-        plugin_dirs = self._config.get('plugin_directories', [])
+        plugin_dirs = self._config.get("plugin_directories", [])
         for dir_path in plugin_dirs:
             self._scan_directory_for_plugins(Path(dir_path))
 
@@ -317,19 +339,20 @@ class PluginRegistry:
                 name = file_path.stem[7:]  # Remove "plugin_" prefix
                 if is_plugin_enabled(name):
                     self.register_lazy_plugin(
-                        name,
-                        lambda fp=file_path: self._load_plugin_from_file(fp)
+                        name, lambda fp=file_path: self._load_plugin_from_file(fp)
                     )
 
     def _load_plugin_from_spec(self, spec: str) -> Type[PluginBase]:
         """Load plugin class from module:class specification."""
-        module_name, class_name = spec.split(':')
+        module_name, class_name = spec.split(":")
         module = importlib.import_module(module_name)
         return getattr(module, class_name)
 
     def _load_plugin_from_file(self, file_path: Path) -> Type[PluginBase]:
         """Load plugin class from file."""
-        spec = importlib.util.spec_from_file_location(f"plugin_{file_path.stem}", file_path)
+        spec = importlib.util.spec_from_file_location(
+            f"plugin_{file_path.stem}", file_path
+        )
         if spec is None or spec.loader is None:
             raise ImportError(f"Could not load plugin from {file_path}")
 
@@ -339,9 +362,11 @@ class PluginRegistry:
         # Look for plugin class
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (isinstance(attr, type) and
-                issubclass(attr, PluginBase) and
-                attr != PluginBase):
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, PluginBase)
+                and attr != PluginBase
+            ):
                 return attr
 
         raise ImportError(f"No plugin class found in {file_path}")
@@ -366,8 +391,9 @@ class PluginRegistry:
         current_version = "0.2.0"  # Would come from test_that.__version__
 
         try:
-            if (version.parse(current_version) < version.parse(info.min_that_version) or
-                version.parse(current_version) > version.parse(info.max_that_version)):
+            if version.parse(current_version) < version.parse(
+                info.min_that_version
+            ) or version.parse(current_version) > version.parse(info.max_that_version):
                 raise PluginVersionError(
                     f"Plugin '{info.name}' requires That version "
                     f"{info.min_that_version}-{info.max_that_version}, "
@@ -380,11 +406,11 @@ class PluginRegistry:
         """Get plugin types for metadata."""
         types = []
         if isinstance(plugin, DecoratorPlugin):
-            types.append('decorator')
+            types.append("decorator")
         if isinstance(plugin, AssertionPlugin):
-            types.append('assertion')
+            types.append("assertion")
         if isinstance(plugin, LifecyclePlugin):
-            types.append('lifecycle')
+            types.append("lifecycle")
         return types
 
 

@@ -28,7 +28,9 @@ class TimeFreeze:
         """
         self.frozen_time = self._parse_time(frozen_time)
 
-    def _parse_time(self, frozen_time: Union[str, datetime.datetime]) -> datetime.datetime:
+    def _parse_time(
+        self, frozen_time: Union[str, datetime.datetime]
+    ) -> datetime.datetime:
         """Convert string to datetime if needed."""
         if isinstance(frozen_time, str):
             try:
@@ -54,6 +56,7 @@ class TimeFreeze:
         Returns:
             Wrapped function
         """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             dt = self.frozen_time
@@ -62,7 +65,8 @@ class TimeFreeze:
             mock_now = dt
             # Fix timezone conversion logic
             mock_utcnow = (
-                dt.astimezone(datetime.timezone.utc) if dt.tzinfo
+                dt.astimezone(datetime.timezone.utc)
+                if dt.tzinfo
                 else dt.replace(tzinfo=datetime.timezone.utc)
             )
             mock_timestamp = dt.timestamp()
@@ -75,8 +79,11 @@ class TimeFreeze:
             with patch("datetime.datetime") as mock_datetime, patch(
                 "datetime.date"
             ) as mock_date, patch("time.time", return_value=mock_timestamp), patch(
-                "time.time_ns", return_value=int(mock_timestamp * NANOSECONDS_PER_SECOND)
-            ), patch("time.gmtime", return_value=mock_utcnow.timetuple()), patch(
+                "time.time_ns",
+                return_value=int(mock_timestamp * NANOSECONDS_PER_SECOND),
+            ), patch(
+                "time.gmtime", return_value=mock_utcnow.timetuple()
+            ), patch(
                 "time.localtime", return_value=mock_now.timetuple()
             ):
 
@@ -111,6 +118,3 @@ class TimeFreeze:
                 return func(*args, **kwargs)
 
         return wrapper
-
-
-

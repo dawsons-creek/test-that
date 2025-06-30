@@ -10,9 +10,9 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
+from .discovery import TestDiscovery
 from .output import TestFormatter
 from .runner import TestRunner, clear_registry, get_registry
-from .discovery import TestDiscovery
 
 
 def discover_test_files(
@@ -184,25 +184,26 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Verbose output (includes stack traces and timing)"
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose output (includes stack traces and timing)",
     )
 
     parser.add_argument(
         "--no-color", action="store_true", help="Disable colored output"
     )
 
-    parser.add_argument(
-        "-s", "--suite", help="Run only tests in the specified suite"
-    )
+    parser.add_argument("-s", "--suite", help="Run only tests in the specified suite")
 
     parser.add_argument(
         "-k", "--filter", help="Run tests matching pattern in description"
     )
 
     parser.add_argument(
-        "--test-dir", default=None,
-        help="Directory to search for tests (default: tests)"
+        "--test-dir",
+        default=None,
+        help="Directory to search for tests (default: tests)",
     )
 
     parser.add_argument(
@@ -210,33 +211,40 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--watch", action="store_true",
-        help="Watch mode (re-run tests when files change)"
+        "--watch",
+        action="store_true",
+        help="Watch mode (re-run tests when files change)",
     )
 
+    parser.add_argument(
+        "--focus",
+        action="store_true",
+        help="Focus mode - show only failures with full context",
+    )
 
     parser.add_argument(
-        "--focus", action="store_true",
-        help="Focus mode - show only failures with full context"
-    )
-    
-    parser.add_argument(
-        "--discover-only", action="store_true",
-        help="Only discover tests without running them (two-phase discovery)"
+        "--discover-only",
+        action="store_true",
+        help="Only discover tests without running them (two-phase discovery)",
     )
 
     # Plugin management subcommand
-    subparsers = parser.add_subparsers(dest='subcommand', help='Additional commands', required=False)
-    plugin_parser = subparsers.add_parser('plugins', help='Manage plugins')
-    plugin_parser.add_argument('plugin_args', nargs='*', help='Plugin command arguments')
+    subparsers = parser.add_subparsers(
+        dest="subcommand", help="Additional commands", required=False
+    )
+    plugin_parser = subparsers.add_parser("plugins", help="Manage plugins")
+    plugin_parser.add_argument(
+        "plugin_args", nargs="*", help="Plugin command arguments"
+    )
 
-    create_parser = subparsers.add_parser('create-plugin', help='Create a new plugin')
-    create_parser.add_argument('name', help='Plugin name')
-    create_parser.add_argument('type', choices=['decorator', 'assertion', 'lifecycle'],
-                              help='Plugin type')
-    create_parser.add_argument('--description', help='Plugin description')
-    create_parser.add_argument('--author', default='Unknown', help='Plugin author')
-    create_parser.add_argument('--output-dir', default='.', help='Output directory')
+    create_parser = subparsers.add_parser("create-plugin", help="Create a new plugin")
+    create_parser.add_argument("name", help="Plugin name")
+    create_parser.add_argument(
+        "type", choices=["decorator", "assertion", "lifecycle"], help="Plugin type"
+    )
+    create_parser.add_argument("--description", help="Plugin description")
+    create_parser.add_argument("--author", default="Unknown", help="Plugin author")
+    create_parser.add_argument("--output-dir", default=".", help="Output directory")
 
     return parser
 
@@ -339,9 +347,7 @@ def _apply_suite_filter(tests, suite_name):
     if not suite_name:
         return tests
 
-    filtered = [
-        (sn, tn, tf) for sn, tn, tf in tests if sn == suite_name
-    ]
+    filtered = [(sn, tn, tf) for sn, tn, tf in tests if sn == suite_name]
 
     if not filtered:
         print(f"No tests found in suite '{suite_name}'")
@@ -356,10 +362,7 @@ def _apply_pattern_filter(tests, pattern):
     if not pattern:
         return tests
 
-    filtered = [
-        (sn, tn, tf) for sn, tn, tf in tests
-        if pattern.lower() in tn.lower()
-    ]
+    filtered = [(sn, tn, tf) for sn, tn, tf in tests if pattern.lower() in tn.lower()]
 
     if not filtered:
         print(f"No tests found matching pattern '{pattern}'")
@@ -375,7 +378,8 @@ def _apply_specific_test_filter(tests, specific_test):
         return tests
 
     filtered = [
-        (sn, tn, tf) for sn, tn, tf in tests
+        (sn, tn, tf)
+        for sn, tn, tf in tests
         if (tf.__name__ == specific_test or specific_test.lower() in tn.lower())
     ]
 
@@ -400,17 +404,21 @@ def _apply_line_filters(tests, line_filters, registry):
                 line_filtered_tests.append((sn, tn, tf))
 
     if not line_filtered_tests:
-        lines_desc = ", ".join([
-            f"{path}:{','.join(map(str, sorted(lines)))}"
-            for path, lines in line_filters.items()
-        ])
+        lines_desc = ", ".join(
+            [
+                f"{path}:{','.join(map(str, sorted(lines)))}"
+                for path, lines in line_filters.items()
+            ]
+        )
         print(f"No tests found at lines: {lines_desc}")
         raise SystemExit(1)
 
-    lines_desc = ", ".join([
-        f"{Path(path).name}:{','.join(map(str, sorted(lines)))}"
-        for path, lines in line_filters.items()
-    ])
+    lines_desc = ", ".join(
+        [
+            f"{Path(path).name}:{','.join(map(str, sorted(lines)))}"
+            for path, lines in line_filters.items()
+        ]
+    )
     print(f"Running tests at lines: {lines_desc}")
     return line_filtered_tests
 
@@ -443,8 +451,6 @@ def update_registry_with_filtered_tests(filtered_tests, all_tests):
             suite.add_test(test_name, test_func, 0)
 
 
-
-
 def run_tests_and_format_output(args, config, registry):
     """Run tests and format output."""
     verbose = args.verbose or config["verbose"]
@@ -469,18 +475,22 @@ def main():
     args = parser.parse_args()
 
     # Handle plugin subcommands
-    if hasattr(args, 'subcommand') and args.subcommand is not None:
-        if args.subcommand == 'plugins':
+    if hasattr(args, "subcommand") and args.subcommand is not None:
+        if args.subcommand == "plugins":
             from .plugins.cli import main as plugin_cli_main
+
             return plugin_cli_main(args.plugin_args)
-        elif args.subcommand == 'create-plugin':
+        elif args.subcommand == "create-plugin":
             from .plugins.toolkit import PluginTemplate
+
             template = PluginTemplate()
             try:
                 template.create_plugin(
-                    args.name, args.type,
+                    args.name,
+                    args.type,
                     args.description or f"A {args.type} plugin",
-                    args.author, args.output_dir
+                    args.author,
+                    args.output_dir,
                 )
                 print(f"Plugin '{args.name}' created successfully!")
                 return 0
@@ -498,7 +508,7 @@ def main():
 
     specific_test, line_filters = parse_file_arguments(args)
     test_files = discover_test_files_from_args(args, config)
-    
+
     # Handle two-phase discovery if requested
     if args.discover_only:
         discovery = TestDiscovery()
@@ -506,7 +516,7 @@ def main():
             discovery.discover_file(file_path)
         discovery.print_summary()
         return 0
-    
+
     # Normal execution - load and run tests
     load_all_test_files(test_files)
 

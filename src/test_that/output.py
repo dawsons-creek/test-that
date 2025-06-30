@@ -36,7 +36,9 @@ class Colors:
 class TestFormatter:
     """Formats test results for display."""
 
-    def __init__(self, use_color: bool = True, verbose: bool = False, focus_mode: bool = False):
+    def __init__(
+        self, use_color: bool = True, verbose: bool = False, focus_mode: bool = False
+    ):
         self.use_color = use_color
         self.verbose = verbose
         self.focus_mode = focus_mode
@@ -209,7 +211,9 @@ class TestFormatter:
 
         return "\n".join(lines)
 
-    def _format_focused_results(self, results: List[TestResult], registry: TestRegistry) -> str:
+    def _format_focused_results(
+        self, results: List[TestResult], registry: TestRegistry
+    ) -> str:
         """Format results in focus mode - show only failures with context."""
         passed, failed = _separate_results(results)
 
@@ -226,7 +230,9 @@ class TestFormatter:
         return "\n".join(output)
 
 
-def _separate_results(results: List[TestResult]) -> Tuple[List[TestResult], List[TestResult]]:
+def _separate_results(
+    results: List[TestResult],
+) -> Tuple[List[TestResult], List[TestResult]]:
     """Separate results into passed and failed lists."""
     passed = []
     failed = []
@@ -262,7 +268,7 @@ def _format_failure_context(error: Exception, formatter) -> List[str]:
     output = []
 
     # Show the assertion that failed
-    if isinstance(error, AssertionError) and hasattr(error, 'message'):
+    if isinstance(error, AssertionError) and hasattr(error, "message"):
         output.append(f"  {error.message}")
         output.append("")
 
@@ -281,6 +287,7 @@ def _format_failure_context(error: Exception, formatter) -> List[str]:
 def _extract_test_context(error: Exception) -> List[str]:
     """Extract test context from traceback."""
     import traceback
+
     output = []
 
     tb = traceback.extract_tb(error.__traceback__)
@@ -290,7 +297,7 @@ def _extract_test_context(error: Exception) -> List[str]:
             output.append(f"    Function: {frame.name}")
             if frame.locals:
                 for var, value in frame.locals.items():
-                    if not var.startswith('_'):
+                    if not var.startswith("_"):
                         output.append(f"    {var} = {repr(value)}")
             break
 

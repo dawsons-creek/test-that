@@ -34,7 +34,7 @@ uv sync
 Write tests that read like documentation:
 
 ```python
-from test_that import test, suite, that
+from test_that import test, suite, that, fixture
 
 @test("validates user email format")
 def test_email_validation():
@@ -143,23 +143,98 @@ that(slow_function).completes_within(seconds=2)
 Clean, predictable test environments with automatic resource management:
 
 ```python
+from test_that import fixture
+
+# Function-scoped fixture (runs for each test)
+@fixture()
+def database():
+    """Create test database with automatic cleanup"""
+    db = create_test_database()
+    yield db  # Provide to test
+    db.cleanup()  # Automatic teardown
+
+# Suite-scoped fixture (shared across tests)
+@fixture(scope="suite")
+def api_client():
+    """Expensive setup shared across all tests"""
+    return APIClient(base_url="https://api.test.com")
+
+# Fixtures with dependencies
+@fixture()
+def user(database):
+    """Fixture that depends on database fixture"""
+    return database.create_user(email="test@example.com")
+
 with suite("Payment Processing"):
-    def setup():
-        """Initialize test environment - return value passed to all tests"""
-        db = create_test_database()
-        mock_payment_gateway = MockStripeAPI()
-        return TestContext(db=db, gateway=mock_payment_gateway)
-    
-    def teardown(context):
-        """Automatic cleanup after each test"""
-        context.db.rollback()
-        context.gateway.reset()
-    
     @test("processes successful payment")
-    def test_payment_success(context=setup):
-        payment = process_payment(context.gateway, amount=100.0)
+    def test_payment_success(database, api_client):
+        payment = process_payment(api_client, amount=100.0)
+        database.save(payment)
         that(payment.status).equals("completed")
         that(payment.transaction_id).is_not_none()
+```
+
+### Parametrized Testing
+
+Run the same test with multiple inputs:
+
+```python
+from test_that import parametrize
+
+@parametrize((2, 2, 4), (3, 3, 6), (5, 5, 10))
+@test("multiplication works")
+def test_multiply(a, b, expected):
+    that(a * b).equals(expected)
+
+# With descriptive parameters
+@parametrize(
+    {"email": "valid@example.com", "valid": True},
+    {"email": "invalid-email", "valid": False},
+    {"email": "@no-name.com", "valid": False}
+)
+@test("validates email formats")
+def test_email_validation(email, valid):
+    that(is_valid_email(email)).equals(valid)
+```
+
+### Class-Based Test Suites
+
+Organize related tests as methods in a class:
+
+```python
+@suite
+class UserManagementTests:
+    @test("creates new user")
+    def test_create_user(self, database):
+        user = User.create(email="new@example.com")
+        that(database.users.count()).equals(1)
+        that(user.id).is_not_none()
+    
+    @test("prevents duplicate emails")
+    def test_duplicate_email(self, database):
+        User.create(email="test@example.com")
+        that(lambda: User.create(email="test@example.com")).raises(DuplicateError)
+```
+
+### Async Test Support
+
+Full support for async/await testing:
+
+```python
+@test("fetches data asynchronously")
+async def test_async_fetch(api_client):
+    data = await api_client.fetch_data()
+    that(data).is_not_empty()
+    that(data[0]).contains("id")
+
+@test("handles concurrent requests")
+async def test_concurrent():
+    results = await asyncio.gather(
+        fetch_user(1),
+        fetch_user(2),
+        fetch_user(3)
+    )
+    that(results).has_length(3)
 ```
 
 ### Advanced Testing Capabilities
@@ -201,26 +276,36 @@ def test_payment_processing():
 
 #### Intelligent Mocking
 ```python
-from test_that import mock
+from test_that import mock, mock_that
 
 @test("handles API failures gracefully")
 def test_api_failure():
-    with mock.patch('requests.get') as mock_get:
-        mock_get.side_effect = ConnectionError("Network timeout")
-        result = fetch_user_data(user_id=123)
-        that(result.error).equals("Service temporarily unavailable")
+    # Simple mocking
+    api_mock = mock(client, 'get_user', side_effect=ConnectionError("Timeout"))
+    result = fetch_user_data(user_id=123)
+    that(result.error).equals("Service temporarily unavailable")
+    
+    # Verify mock was called
+    api_mock.assert_called_once()
 
-# Enhanced mock assertions
-@test("tracks API call patterns")
-def test_api_usage():
-    with mock.patch('api_client.get') as mock_api:
-        service = UserService()
-        service.get_user(123)
-        service.get_user(456)
-        
-        that(mock_api).was_called_times(2)
-        that(mock_api.calls[0]).has_args(123)
-        that(mock_api.calls[1]).has_args(456)
+# Advanced mock features
+@test("tracks complex API interactions")
+def test_api_patterns():
+    # Sequential returns
+    api_mock = mock(client, 'fetch', side_effect=[data1, data2, data3])
+    
+    # Make calls
+    service = DataService(client)
+    service.sync_all()
+    
+    # Rich assertions with mock_that
+    that(mock_that(api_mock).call_count).equals(3)
+    that(mock_that(api_mock).first_call.args).contains('users')
+    that(mock_that(api_mock).last_call.kwargs).contains('retry')
+    
+    # Access specific calls
+    second_call = api_mock.get_call(1)
+    that(second_call.args[0]).equals('posts')
 ```
 
 #### Plugin System
@@ -237,6 +322,20 @@ def validates_email(that_obj, email):
 
 # Usage
 that("user@example.com").validates_email()
+```
+
+### Combined Time and HTTP Replay
+```python
+from test_that import replay
+
+# Test with both frozen time and recorded HTTP calls
+@replay(time="2024-01-01T12:00:00Z", http="integration_test")
+@test("complete integration flow")
+def test_user_registration():
+    # Time is frozen and HTTP calls are recorded/replayed
+    user = register_user(email="test@example.com")
+    that(user.created_at).equals(datetime(2024, 1, 1, 12, 0, 0))
+    that(user.verification_sent).is_true()
 ```
 
 ## Precise Test Targeting
@@ -278,6 +377,7 @@ This makes debugging and development much faster by running only the tests you'r
 ```python
 that(value).equals(expected)
 that(value).does_not_equal(expected)
+that(3.14159).approximately_equals(3.14, tolerance=0.01)
 ```
 
 ### Truthiness
@@ -294,6 +394,8 @@ that(collection).contains(item)
 that(collection).does_not_contain(item)
 that(collection).is_empty()
 that(collection).has_length(n)
+that([2, 4, 6]).all_satisfy(lambda x: x % 2 == 0)
+that([1, 2, 3]).any_satisfy(lambda x: x > 2)
 ```
 
 ### Strings
@@ -314,6 +416,13 @@ that(number).is_between(min, max)
 ```python
 that(value).is_instance_of(Type)
 that(value).has_type(Type)
+```
+
+### Object Attributes
+```python
+that(user).has_attr("email")
+that(user).attr("email").equals("test@example.com")
+that(user).attr("roles").contains("admin")
 ```
 
 ### Exceptions

@@ -48,10 +48,10 @@ class HTTPClient(Protocol):
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Any] = None,
         json: Optional[Any] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Make an HTTP request.
-        
+
         Args:
             method: HTTP method (GET, POST, etc)
             url: URL to request
@@ -59,7 +59,7 @@ class HTTPClient(Protocol):
             data: Optional request body data
             json: Optional JSON data (will be serialized)
             **kwargs: Additional client-specific arguments
-            
+
         Returns:
             HTTPResponse object
         """
@@ -91,7 +91,7 @@ class HTTPClientAdapter:
 
     def get_patch_targets(self) -> Dict[str, str]:
         """Get the module paths to patch.
-        
+
         Returns:
             Dict mapping attribute names to module paths to patch.
             E.g., {"request": "requests.request", "get": "requests.get"}
@@ -100,10 +100,10 @@ class HTTPClientAdapter:
 
     def create_mock_response(self, response_data: Dict[str, Any]) -> Any:
         """Create a mock response object for this client.
-        
+
         Args:
             response_data: Dict with status, headers, body, is_binary
-            
+
         Returns:
             Mock response object compatible with the client
         """

@@ -589,10 +589,14 @@ class ThatAssertion:
             return self
 
         get_key = _create_key_function(key_func)
-        sorted_items = _sort_items_safely(items, get_key, reverse, self.expression, key_func)
+        sorted_items = _sort_items_safely(
+            items, get_key, reverse, self.expression, key_func
+        )
 
         if items != sorted_items:
-            _raise_sorting_error(items, sorted_items, reverse, self.expression, key_func)
+            _raise_sorting_error(
+                items, sorted_items, reverse, self.expression, key_func
+            )
 
         return self
 
@@ -612,17 +616,21 @@ def _validate_iterable_for_sorting(value: Any, expression: str, key_func) -> lis
 def _create_key_function(key_func: Union[str, Callable]):
     """Create appropriate key function from string or callable."""
     if isinstance(key_func, str):
+
         def get_key(item):
             if isinstance(item, dict):
                 return item[key_func]
             else:
                 return getattr(item, key_func)
+
         return get_key
     else:
         return key_func
 
 
-def _sort_items_safely(items: list, get_key: Callable, reverse: bool, expression: str, key_func) -> list:
+def _sort_items_safely(
+    items: list, get_key: Callable, reverse: bool, expression: str, key_func
+) -> list:
     """Sort items safely with error handling."""
     try:
         return sorted(items, key=get_key, reverse=reverse)
@@ -634,7 +642,9 @@ def _sort_items_safely(items: list, get_key: Callable, reverse: bool, expression
         ) from None
 
 
-def _raise_sorting_error(items: list, sorted_items: list, reverse: bool, expression: str, key_func):
+def _raise_sorting_error(
+    items: list, sorted_items: list, reverse: bool, expression: str, key_func
+):
     """Raise assertion error for unsorted items."""
     first_diff_index = _find_first_difference(items, sorted_items)
     direction = "descending" if reverse else "ascending"

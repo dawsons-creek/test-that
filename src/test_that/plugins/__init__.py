@@ -15,12 +15,12 @@ from .config import get_plugin_specific_config, load_plugin_config
 from .registry import plugin_registry
 
 __all__ = [
-    'plugin_registry',
-    'PluginBase',
-    'DecoratorPlugin',
-    'AssertionPlugin',
-    'LifecyclePlugin',
-    'PluginInfo',
-    'load_plugin_config',
-    'get_plugin_specific_config'
+    "plugin_registry",
+    "PluginBase",
+    "DecoratorPlugin",
+    "AssertionPlugin",
+    "LifecyclePlugin",
+    "PluginInfo",
+    "load_plugin_config",
+    "get_plugin_specific_config",
 ]

@@ -21,4 +21,14 @@ from .replay import replay
 from .runner import suite, test
 
 __version__ = "0.2.0"
-__all__ = ["test", "suite", "that", "fixture", "parametrize", "replay", "mock", "mock_that", "with_isolated_context"]
+__all__ = [
+    "test",
+    "suite",
+    "that",
+    "fixture",
+    "parametrize",
+    "replay",
+    "mock",
+    "mock_that",
+    "with_isolated_context",
+]

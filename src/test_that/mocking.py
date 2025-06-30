@@ -29,9 +29,13 @@ class MockCall:
 class Mock:
     """A mock object that tracks calls and provides verification."""
 
-    def __init__(self, name: str, return_value: Any = None,
-                 side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
-                 raises: Optional[Exception] = None):
+    def __init__(
+        self,
+        name: str,
+        return_value: Any = None,
+        side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
+        raises: Optional[Exception] = None,
+    ):
         self.name = name
         self.return_value = return_value
         self.side_effect = side_effect
@@ -53,7 +57,9 @@ class Mock:
             try:
                 return next(self._side_effect_iter)
             except StopIteration:
-                raise ValueError(f"Mock '{self.name}' exhausted side_effect values") from None
+                raise ValueError(
+                    f"Mock '{self.name}' exhausted side_effect values"
+                ) from None
 
         if callable(self.side_effect):
             return self.side_effect(*args, **kwargs)
@@ -157,10 +163,14 @@ _DELETED = object()
 _mock_context = MockContext()
 
 
-def mock(obj: Any, attr_name: str, *,
-         return_value: Any = None,
-         side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
-         raises: Optional[Exception] = None) -> Mock:
+def mock(
+    obj: Any,
+    attr_name: str,
+    *,
+    return_value: Any = None,
+    side_effect: Optional[Union[List[Any], Exception, Callable]] = None,
+    raises: Optional[Exception] = None,
+) -> Mock:
     """
     Replace an attribute with a mock object.
 
@@ -199,7 +209,7 @@ def mock(obj: Any, attr_name: str, *,
         name=f"{obj.__class__.__name__}.{attr_name}",
         return_value=return_value,
         side_effect=side_effect,
-        raises=raises
+        raises=raises,
     )
 
     # Replace attribute
@@ -260,5 +270,3 @@ def mock_that(mock_obj: Mock):
             return self._mock.get_call(index)
 
     return MockAssertions(mock_obj)
-
-

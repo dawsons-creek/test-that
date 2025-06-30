@@ -63,9 +63,7 @@ def load_plugin_config() -> Dict[str, Any]:
     pyproject_path = "pyproject.toml"
 
     return _config_cache.get(
-        "plugin_config",
-        lambda: _load_toml_config(),
-        pyproject_path
+        "plugin_config", lambda: _load_toml_config(), pyproject_path
     )
 
 
@@ -111,17 +109,21 @@ def _get_toml_loader():
     """Get appropriate TOML loader function."""
     try:
         import tomllib
+
         return tomllib.load
     except ImportError:
         try:
             import tomli
+
             return tomli.load
         except ImportError:
             try:
                 import toml
+
                 def toml_load(f):
                     f.seek(0)
-                    return toml.load(f.read().decode('utf-8'))
+                    return toml.load(f.read().decode("utf-8"))
+
                 return toml_load
             except ImportError:
                 return None
@@ -130,24 +132,26 @@ def _get_toml_loader():
 def _validate_config(config: Dict[str, Any]) -> None:
     """Validate plugin configuration."""
     # Validate plugin names
-    for name in config.get('enabled', []):
+    for name in config.get("enabled", []):
         if not _is_valid_plugin_name(name):
             raise ValueError(f"Invalid plugin name: {name}")
 
-    for name in config.get('disabled', []):
+    for name in config.get("disabled", []):
         if not _is_valid_plugin_name(name):
             raise ValueError(f"Invalid plugin name: {name}")
 
     # Validate directories
-    for dir_path in config.get('plugin_directories', []):
+    for dir_path in config.get("plugin_directories", []):
         path = Path(dir_path)
         if not path.exists():
             print(f"Warning: Plugin directory not found: {dir_path}")
 
     # Validate numeric values
-    max_load_time = config.get('max_load_time', 5.0)
+    max_load_time = config.get("max_load_time", 5.0)
     if not isinstance(max_load_time, (int, float)) or max_load_time <= 0:
-        raise ValueError(f"max_load_time must be a positive number, got: {max_load_time}")
+        raise ValueError(
+            f"max_load_time must be a positive number, got: {max_load_time}"
+        )
 
 
 def _is_valid_plugin_name(name: str) -> bool:
@@ -157,7 +161,7 @@ def _is_valid_plugin_name(name: str) -> bool:
     if not name or len(name) > 100:
         return False
     # Allow alphanumeric, underscore, dash
-    return all(c.isalnum() or c in '_-' for c in name)
+    return all(c.isalnum() or c in "_-" for c in name)
 
 
 def get_plugin_specific_config(plugin_name: str) -> Dict[str, Any]:
@@ -166,9 +170,7 @@ def get_plugin_specific_config(plugin_name: str) -> Dict[str, Any]:
     pyproject_path = "pyproject.toml"
 
     return _config_cache.get(
-        cache_key,
-        lambda: _load_plugin_specific_config(plugin_name),
-        pyproject_path
+        cache_key, lambda: _load_plugin_specific_config(plugin_name), pyproject_path
     )
 
 
@@ -204,8 +206,8 @@ def invalidate_config_cache(plugin_name: str = None):
 def list_available_plugins() -> List[str]:
     """List all available plugins from configuration."""
     config = load_plugin_config()
-    enabled = config.get('enabled', [])
-    disabled = config.get('disabled', [])
+    enabled = config.get("enabled", [])
+    disabled = config.get("disabled", [])
 
     # If enabled list is empty, all discovered plugins are enabled
     if not enabled:
@@ -218,8 +220,8 @@ def list_available_plugins() -> List[str]:
 def is_plugin_enabled(plugin_name: str) -> bool:
     """Check if a specific plugin is enabled."""
     config = load_plugin_config()
-    enabled = config.get('enabled', [])
-    disabled = config.get('disabled', [])
+    enabled = config.get("enabled", [])
+    disabled = config.get("disabled", [])
 
     # If plugin is explicitly disabled, return False
     if plugin_name in disabled:

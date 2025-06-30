@@ -7,7 +7,7 @@ the ThreadPoolExecutor workaround from the original implementation.
 
 import asyncio
 import inspect
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from .runner import TestResult, TestRunner
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class AsyncTestRunner(TestRunner):
     """Test runner with improved async support."""
 
-    def __init__(self, verbose: bool = False, context: Optional['TestContext'] = None):
+    def __init__(self, verbose: bool = False, context: Optional["TestContext"] = None):
         super().__init__(verbose, context)
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
@@ -34,11 +34,15 @@ class AsyncTestRunner(TestRunner):
                 asyncio.set_event_loop(self._event_loop)
         return self._event_loop
 
-    async def _run_async_test(self, test_func: Callable, fixtures: Dict[str, Any]) -> None:
+    async def _run_async_test(
+        self, test_func: Callable, fixtures: Dict[str, Any]
+    ) -> None:
         """Run an async test function."""
         await test_func(**fixtures)
 
-    def _execute_test_function(self, test_func: Callable, fixtures: Dict[str, Any]) -> None:
+    def _execute_test_function(
+        self, test_func: Callable, fixtures: Dict[str, Any]
+    ) -> None:
         """Execute a test function (sync or async) with fixtures."""
         if inspect.iscoroutinefunction(test_func):
             # Async test
@@ -77,6 +81,7 @@ class AsyncTestRunner(TestRunner):
                 fixture_registry = self.context.fixture_registry
             else:
                 from .fixtures import get_fixture_registry
+
                 fixture_registry = get_fixture_registry()
             fixtures = fixture_registry.resolve_fixtures(test_func)
 
@@ -101,10 +106,7 @@ class AsyncTestRunner(TestRunner):
         duration = time.time() - start_time
 
         return TestResult(
-            test_name=test_name,
-            passed=passed,
-            error=error,
-            duration=duration
+            test_name=test_name, passed=passed, error=error, duration=duration
         )
 
     async def run_all_async(self) -> List[TestResult]:
@@ -112,7 +114,7 @@ class AsyncTestRunner(TestRunner):
         from .runner import get_registry
 
         _registry = get_registry()
-        
+
         standalone_results = await self._run_standalone_tests_async(_registry)
         suite_results = await self._run_suite_tests_async(_registry)
 
@@ -125,7 +127,7 @@ class AsyncTestRunner(TestRunner):
             self.run_test_async(name, func)
             for name, func, _ in registry.standalone_tests
         ]
-        
+
         if not tasks:
             return []
 
@@ -135,13 +137,14 @@ class AsyncTestRunner(TestRunner):
     async def _run_suite_tests_async(self, registry) -> List[TestResult]:
         """Run suite tests sequentially."""
         all_results = []
-        
+
         for _suite_name, suite in registry.suites.items():
             # Get fixtures (use context if available)
             if self.context:
                 fixture_registry = self.context.fixture_registry
             else:
                 from .fixtures import get_fixture_registry
+
                 fixture_registry = get_fixture_registry()
             fixture_registry.setup_suite_fixtures()
 
@@ -150,7 +153,7 @@ class AsyncTestRunner(TestRunner):
                 all_results.append(result)
 
             fixture_registry.teardown_suite_fixtures()
-            
+
         return all_results
 
     def _handle_result(self, result: Any) -> TestResult:
@@ -159,16 +162,13 @@ class AsyncTestRunner(TestRunner):
             return result
         elif isinstance(result, Exception):
             return TestResult(
-                test_name="Unknown",
-                passed=False,
-                error=result,
-                duration=0.0
+                test_name="Unknown", passed=False, error=result, duration=0.0
             )
         return TestResult(
             test_name="Unknown",
             passed=False,
             error=TypeError(f"Unexpected result type: {type(result)}"),
-            duration=0.0
+            duration=0.0,
         )
 
     def run_all(self) -> List[TestResult]:
@@ -181,9 +181,12 @@ class AsyncTestRunner(TestRunner):
     def _has_async_tests(self) -> bool:
         """Check if there are any asynchronous tests registered."""
         from .runner import get_registry
+
         _registry = get_registry()
 
-        if any(inspect.iscoroutinefunction(f) for _, f, _ in _registry.standalone_tests):
+        if any(
+            inspect.iscoroutinefunction(f) for _, f, _ in _registry.standalone_tests
+        ):
             return True
 
         for suite in _registry.suites.values():
@@ -201,4 +204,3 @@ class AsyncTestRunner(TestRunner):
                 "Use run_all_async() or run tests from outside async context."
             )
         return loop.run_until_complete(self.run_all_async())
-

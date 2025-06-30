@@ -21,51 +21,50 @@ class PluginCLI:
     def create_parser(self) -> argparse.ArgumentParser:
         """Create the argument parser for plugin commands."""
         parser = argparse.ArgumentParser(
-            description="That Plugin Manager",
-            prog="that plugins"
+            description="That Plugin Manager", prog="that plugins"
         )
 
-        subparsers = parser.add_subparsers(dest='command', help='Plugin commands')
+        subparsers = parser.add_subparsers(dest="command", help="Plugin commands")
 
         # List command
-        list_parser = subparsers.add_parser('list', help='List all plugins')
+        list_parser = subparsers.add_parser("list", help="List all plugins")
         list_parser.add_argument(
-            '--type', choices=['decorator', 'assertion', 'lifecycle', 'lazy'],
-            help='Filter by plugin type'
+            "--type",
+            choices=["decorator", "assertion", "lifecycle", "lazy"],
+            help="Filter by plugin type",
         )
         list_parser.add_argument(
-            '--enabled', action='store_true',
-            help='Show only enabled plugins'
+            "--enabled", action="store_true", help="Show only enabled plugins"
         )
         list_parser.add_argument(
-            '--stats', action='store_true',
-            help='Show plugin statistics'
+            "--stats", action="store_true", help="Show plugin statistics"
         )
 
         # Info command
-        info_parser = subparsers.add_parser('info', help='Show plugin information')
-        info_parser.add_argument('name', help='Plugin name')
+        info_parser = subparsers.add_parser("info", help="Show plugin information")
+        info_parser.add_argument("name", help="Plugin name")
 
         # Enable command
-        enable_parser = subparsers.add_parser('enable', help='Enable a plugin')
-        enable_parser.add_argument('name', help='Plugin name')
+        enable_parser = subparsers.add_parser("enable", help="Enable a plugin")
+        enable_parser.add_argument("name", help="Plugin name")
 
         # Disable command
-        disable_parser = subparsers.add_parser('disable', help='Disable a plugin')
-        disable_parser.add_argument('name', help='Plugin name')
+        disable_parser = subparsers.add_parser("disable", help="Disable a plugin")
+        disable_parser.add_argument("name", help="Plugin name")
 
         # Reload command
-        reload_parser = subparsers.add_parser('reload', help='Reload plugin system')
+        reload_parser = subparsers.add_parser("reload", help="Reload plugin system")
         reload_parser.add_argument(
-            '--force', action='store_true',
-            help='Force reload even if already initialized'
+            "--force",
+            action="store_true",
+            help="Force reload even if already initialized",
         )
 
         # Status command
-        subparsers.add_parser('status', help='Show plugin system status')
+        subparsers.add_parser("status", help="Show plugin system status")
 
         # Doctor command
-        subparsers.add_parser('doctor', help='Diagnose plugin issues')
+        subparsers.add_parser("doctor", help="Diagnose plugin issues")
 
         return parser
 
@@ -80,11 +79,11 @@ class PluginCLI:
 
         try:
             # Initialize plugin system if needed
-            if parsed_args.command != 'reload':
+            if parsed_args.command != "reload":
                 self.registry.initialize()
 
             # Dispatch to command handler
-            handler = getattr(self, f'_handle_{parsed_args.command}')
+            handler = getattr(self, f"_handle_{parsed_args.command}")
             return handler(parsed_args)
 
         except Exception as e:
@@ -96,11 +95,12 @@ class PluginCLI:
         plugins = self.registry.list_plugins()
 
         if args.type:
-            plugins = [p for p in plugins if args.type in p['type']]
+            plugins = [p for p in plugins if args.type in p["type"]]
 
         if args.enabled:
             from .config import is_plugin_enabled
-            plugins = [p for p in plugins if is_plugin_enabled(p['name'])]
+
+            plugins = [p for p in plugins if is_plugin_enabled(p["name"])]
 
         if not plugins:
             print("No plugins found")
@@ -146,7 +146,7 @@ class PluginCLI:
         stats = self.registry.get_stats()
         print(f"Loaded {stats['total_plugins']} plugins")
 
-        if stats['failed_plugins'] > 0:
+        if stats["failed_plugins"] > 0:
             print(f"Warning: {stats['failed_plugins']} plugins failed to load")
 
         return 0
@@ -198,7 +198,7 @@ class PluginCLI:
 
         # Check for failed plugins
         stats = self.registry.get_stats()
-        if stats['failed_plugins'] > 0:
+        if stats["failed_plugins"] > 0:
             print(f"✗ {stats['failed_plugins']} plugins failed to load")
             issues_found += 1
         else:
@@ -208,7 +208,9 @@ class PluginCLI:
         for plugin in self.registry._plugins.values():
             missing_deps = plugin.validate_dependencies()
             if missing_deps:
-                print(f"✗ Plugin '{plugin.info.name}' missing dependencies: {missing_deps}")
+                print(
+                    f"✗ Plugin '{plugin.info.name}' missing dependencies: {missing_deps}"
+                )
                 issues_found += 1
 
         if issues_found == 0:
@@ -224,9 +226,9 @@ class PluginCLI:
             return
 
         # Calculate column widths
-        name_width = max(len(p['name']) for p in plugins)
-        version_width = max(len(p['version']) for p in plugins)
-        type_width = max(len(','.join(p['type'])) for p in plugins)
+        name_width = max(len(p["name"]) for p in plugins)
+        version_width = max(len(p["version"]) for p in plugins)
+        type_width = max(len(",".join(p["type"])) for p in plugins)
 
         # Minimum widths
         name_width = max(name_width, 8)
@@ -239,14 +241,16 @@ class PluginCLI:
         print("-" * len(header))
 
         # Print plugins
-        for plugin in sorted(plugins, key=lambda p: p['name']):
-            name = plugin['name']
-            version = plugin['version']
-            types = ','.join(plugin['type'])
+        for plugin in sorted(plugins, key=lambda p: p["name"]):
+            name = plugin["name"]
+            version = plugin["version"]
+            types = ",".join(plugin["type"])
             load_time = f"{plugin['load_time']:.3f}s"
-            priority = str(plugin['priority'])
+            priority = str(plugin["priority"])
 
-            print(f"{name:<{name_width}} {version:<{version_width}} {types:<{type_width}} {load_time:<10} {priority}")
+            print(
+                f"{name:<{name_width}} {version:<{version_width}} {types:<{type_width}} {load_time:<10} {priority}"
+            )
 
     def _print_plugin_info(self, plugin) -> None:
         """Print detailed plugin information."""
@@ -317,5 +321,5 @@ def main(args: List[str] = None) -> int:
     return cli.run(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
